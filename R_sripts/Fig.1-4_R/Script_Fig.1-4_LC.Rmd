@@ -1,0 +1,1386 @@
+---
+title: "Lake_Cadagno_Plots"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+##Installing all required packages
+
+
+
+RequiredPackages <- c("ggplot2", "Rcpp", "vegan", "dplyr", "scales", "grid", "reshape2" ,"plyr","magrittr" ,"randomcoloR", "devtools", "remotes", "geosphere", "matrixStats" ,"data.table" ,"DT", "cowplot" , "colorspace", "PerformanceAnalytics", "corrplot", "Hmisc", "tidyverse", "readxl", "corrplot", "ggpubr", "ggalluvial")
+for (i in RequiredPackages) { #Installs packages if not yet installed
+    if (!require(i, character.only = TRUE)) install.packages(i)
+}
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+ #   install.packages("BiocManager")
+
+#BiocManager::install("phyloseq")
+library(ggplot2)
+  library(Hmisc)
+library(easynls)
+library(ggtree)
+library(ggtext)
+library(glue)
+library(treeio)
+library(patchwork)
+  library(vegan) 
+  library(dplyr) 
+  library(scales) 
+  library(grid) 
+  library(reshape2)
+ library(randomcoloR)
+  library(phyloseq) 
+  library(magrittr)
+  library(geosphere)
+  library(matrixStats)
+  library(data.table)
+  library(DT)
+  library(ggalluvial)
+  library(cowplot)
+  library(colorspace)
+  library(corrplot)
+  library(tidyverse)
+  library(readxl)
+  library(corrplot)
+  library(ggpubr)
+  #library(metagMisc)
+  library(RColorBrewer)
+library(ggrepel)
+#library(metagMisc)
+library(stringr)
+library(zoo)
+library("PerformanceAnalytics")
+#library("ggstatsplot")
+
+
+```
+
+```{r CTD_data_Lake_profile1, echo=TRUE}
+CTD1_28_Aug_17_R <- read.csv("C:/Users/sooch/Box/CTD_Files_R/CTD1_28_Aug_17_II.csv")         #CTD1 28.08.2017
+CTD1_28_Aug_17_avg_R <- read.csv("C:/Users/sooch/Box/CTD_Files_R/CTD1_28_Aug_17_avg_II.csv") #CTD1 28.08.2017 avg/depth
+CTD1_29_Aug_17_R <- read.csv("C:/Users/sooch/Box/CTD_Files_R/CTD1_29_Aug_17_II.csv")         #CTD1 29.08.2017
+CTD1_29_Aug_17_avg_R <- read.csv("C:/Users/sooch/Box/CTD_Files_R/CTD1_29_Aug_17_avg_II.csv") #CTD1 29.08.2017 avg/depth
+ CTD2_29_Aug_17_avg_R <- read.csv("C:/Users/sooch/Box/CTD_Files_R/CTD2_29_Aug_17_avg_II.csv") #CTD12 29.08.2017 avg/depth
+ 
+ 
+ Meta_data_PLP_VLP_II <-  read.csv("~/Meta_data_dec_cells.csv")          #Metadata
+  Org_Inrg_R <- read.csv("~/Org_Inrg_R_II.csv")                                            #Organic and Inorganic
+  profiles_cbp <- read.csv("~/BP_R.csv")
+ finalPP_chl23 <- read.csv("~/PP_R.csv") 
+ 
+
+
+
+#Fig. 1(B) Turbidity & oxygen
+TurbvOxy123<- ggplot(data=CTD1_28_Aug_17_R, aes(y=CTD1_28_Aug_17_R$Depth_m_CTD1_28))+
+     geom_path(data=CTD1_28_Aug_17_R, aes(y=CTD1_28_Aug_17_R$Depth_m_CTD1_28, x=CTD1_28_Aug_17_R$Turb_FTU_CTD1_28), 
+     color="black", size=2, linetype="dashed")+
+
+     geom_path(data=CTD1_29_Aug_17_R, aes(y=CTD1_29_Aug_17_R$Depth_m_CTD1_29, x=CTD1_29_Aug_17_R$Turb_CTD1_29), 
+     color="black", size=2, linetype="solid")+
+     geom_path(data=CTD1_29_Aug_17_avg_R, aes(y=as.numeric(CTD1_29_Aug_17_avg_R$Depth), x=CTD1_29_Aug_17_avg$Oxy_correc2/12), 
+     color="lightsalmon4", size=2, linetype="solid")+
+     geom_path(data=CTD1_28_Aug_17_avg_R, aes(y=as.numeric(CTD1_28_Aug_17_avg_R$Depth), x=CTD1_28_Aug_17_avg_R$DO_mg_l_CTD1_282/12), 
+     color="lightsalmon4", size=2, linetype="dashed")+
+
+     geom_point(data=CTD1_29_Aug_17_avg_R, aes(y=as.numeric(CTD1_29_Aug_17_avg_R$Depth), x=CTD1_29_Aug_17_avg_R$Oxy_correc2/12), 
+     color="lightsalmon4", size=3.5)+
+     geom_point(data=CTD1_28_Aug_17_avg_R, aes(y=as.numeric(CTD1_28_Aug_17_avg_R$Depth), x=CTD1_28_Aug_17_avg_R$DO_mg_l_CTD1_282/12), 
+     color="lightsalmon4", size=3.5)+
+     scale_x_continuous(sec.axis = sec_axis(~.*12, name = "Oxygen (μmol/L)"))+
+     xlab("Turbidity (FTU)")+
+     ylab("Depth (m)") +
+     scale_y_reverse(limits = c(21,1), breaks=c(19, 17, 15.5, 15, 14, 13, 11,9, 7,5, 3, 1))+
+     theme_bw()+
+     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+     theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+     theme(axis.title.x.top = element_text(color = "lightsalmon4"))+
+     theme(axis.title.x.bottom = element_text(color = "black"))+
+     annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=12.5, alpha=0.1, fill="green4")+
+     annotate("rect", xmin=-Inf, xmax=Inf, ymin=12.5, ymax=13.5, alpha=0.2, fill="deeppink4")+
+     annotate("rect", xmin=-Inf, xmax=Inf, ymin=13.5, ymax=15.5, alpha=0.5, fill="deeppink4")+
+     annotate("rect", xmin=-Inf, xmax=Inf, ymin=15.5, ymax=16.5, alpha=0.2, fill="deeppink4")+
+     annotate("rect", xmin=-Inf, xmax=Inf, ymin=16.5, ymax=Inf, alpha=0.2, fill="pink4")+
+     annotate("text", x = 16, y = 2, label = "(- - -) 28 August 2017", colour = "black", size = 8.5)+   
+     annotate("text", x = 16, y = 3, label = "( — ) 29 August 2017", colour = "black", size = 8.5)+
+     theme(axis.text=element_text(size=24),axis.title=element_text(size=24))
+
+#Fig.1 (C)
+Temp_LC_cond123<- ggplot()+
+                  geom_path(data=CTD1_29_Aug_17_R, aes(y=CTD1_29_Aug_17_R$Depth_m_CTD1_29,                                                 x=CTD1_29_Aug_17_R$Temp_CTD1_29), 
+                  color="black", linetype="solid", size=2)+
+                  geom_path(data=CTD1_28_Aug_17_R, aes(y=CTD1_28_Aug_17_R$Depth_m_CTD1_28, x=CTD1_28_Aug_17_R$Temp_CTD1_28), 
+                  color="black", linetype="dashed", size=2)+
+                  geom_path(data=CTD1_28_Aug_17_R,                                                                                        aes(y=CTD1_28_Aug_17_R$Depth_m_CTD1_28,x=CTD1_28_Aug_17_R$Cond_ms_p_cm_CTD1_28*70),
+                  color="lightsalmon4", size=2, linetype="dashed")+
+
+                  geom_path(data=CTD1_29_Aug_17_R, aes(y=CTD1_29_Aug_17_R$Depth_m_CTD1_29,                                                 x=CTD1_29_Aug_17_R$Cond_CTD1_29*70),
+                  color="lightsalmon4", size=2, linetype="solid")+
+                  scale_x_continuous(sec.axis = sec_axis(~./70, name = "Conductivity (mS/cm)"))+
+                  scale_y_reverse(limits = c(21,1), breaks=c(19, 17, 15.5, 15, 14, 13, 11,9, 7,5, 3, 1))+
+                  theme_bw()+
+                  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+                  theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+                  xlab("Temperature (°C)")+
+                  theme(axis.title.x.top = element_text(color = "lightsalmon4"))+
+                  theme(axis.title.x.bottom = element_text(color = "black"))+
+                  ylab("Depth (m)") +
+                  theme(axis.title.y = element_blank())+
+                  theme(axis.text.y = element_blank())+
+                  theme(axis.ticks.y = element_blank())+
+                  annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=12.5, alpha=0.1, fill="green4")+
+                  annotate("rect", xmin=-Inf, xmax=Inf, ymin=12.5, ymax=13.5, alpha=0.2, fill="deeppink4")+
+                  annotate("rect", xmin=-Inf, xmax=Inf, ymin=13.5, ymax=15.5, alpha=0.5, fill="deeppink4")+
+                  annotate("rect", xmin=-Inf, xmax=Inf, ymin=15.5, ymax=16.5, alpha=0.2, fill="deeppink4")+
+                  annotate("rect", xmin=-Inf, xmax=Inf, ymin=16.5, ymax=Inf, alpha=0.2, fill="pink4")+
+                    theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))
+#Fig.1 (D)
+
+chlpar<- ggplot(data=CTD1_29_Aug_17_R, aes(x=Depth_m_CTD1_29)) + 
+         geom_path(data=CTD1_29_Aug_17_R, aes(y= as.numeric(CTD1_29_Aug_17_R$Depth_m_CTD1_29),               x=CTD1_29_Aug_17_R$Chl_A_CTD1_29*10), color="lightsalmon4", linetype="solid",  size=2)+
+       geom_path(data=CTD1_28_Aug_17_R, aes(y=as.numeric(CTD1_28_Aug_17_R$Depth_m_CTD1_28),x=CTD1_28_Aug_17_R$Chl_A_ug_p_l_CTD1_28*10), color="lightsalmon4", linetype="dashed", size=2)+
+   geom_path(data=CTD2_29_Aug_17_avg_R, aes(y=as.numeric(Depth), x=Phycocyanin_CTD2_29*10), color="lightsalmon1", linetype="solid", size=2)+
+   geom_point(data=CTD2_29_Aug_17_avg_R, aes(y=as.numeric(Depth), x=Phycocyanin_CTD2_29*10), color="lightsalmon1", size=3.5)+
+       geom_path(data=CTD2_29_Aug_17_avg_R, aes(y=as.numeric(CTD2_29_Aug_17_avg_R$Depth), x=CTD2_29_Aug_17_avg_R$PAR_CTD2_29),
+       linetype="solid", size=2, color="black")+
+       geom_point(data=CTD2_29_Aug_17_avg_R, aes(y=as.numeric(CTD2_29_Aug_17_avg_R$Depth),x=CTD2_29_Aug_17_avg_R$PAR_CTD2_29)        , color="black", size=3.5)+
+       scale_y_reverse(limits = c(21,1), breaks=c(19, 17.0, 15.5,15,14, 13.0, 11.0,9.0, 7.0,5.0, 3.0, 1))+
+       scale_x_continuous(limits = c(-10,600), sec.axis = sec_axis(~./10, name = "Photosynthetic Pigments (μg/L)"))+
+       xlab(expression( bold("PAR "("w/m" ^-2))))+  ##Superscript example  xlab(expression(paste("DOC (mg ", L^-1,")")))
+       ylab("Depth(m)")+
+       theme_bw()+
+       theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+       annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=12.5, alpha=0.1, fill="green4")+
+       annotate("rect", xmin=-Inf, xmax=Inf, ymin=12.5, ymax=13.5, alpha=0.2, fill="deeppink4")+
+       annotate("rect", xmin=-Inf, xmax=Inf, ymin=13.5, ymax=15.5, alpha=0.5, fill="deeppink4")+
+       annotate("rect", xmin=-Inf, xmax=Inf, ymin=15.5, ymax=16.5, alpha=0.2, fill="deeppink4")+
+       annotate("rect", xmin=-Inf, xmax=Inf, ymin=16.5, ymax=Inf, alpha=0.2, fill="pink4")+
+       #theme(plot.title = element_text(hjust = 0.5))+
+       theme(axis.title.y = element_blank())+
+       theme(axis.text.y = element_blank())+
+       theme(axis.ticks.y = element_blank())+ theme(axis.line.y.right = element_blank())+
+       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+       theme(axis.title.x.top = element_text(color = "lightsalmon4"))+
+       theme(axis.title.x=element_text(size=24,face="bold")) #Legend annotation with Adobe Illustrator
+
+#Fig.1 (E)
+ H2S_Amm<- ggplot(data=Org_Inrg_R, aes(y=depth_m))+
+    geom_path(data=Org_Inrg_R, aes(y= depth_m, x = Ammonium_ug_L), colour="black", size=2)+
+      geom_point(data=Org_Inrg_R, aes(y= depth_m, x = Ammonium_ug_L), colour="black", size=3.5)+
+    geom_point(data=Org_Inrg_R, aes(y=depth_m, x=avg_h2S*2000), color="lightsalmon4", size=3.5)+
+    geom_path(data=Org_Inrg_R[!is.na(Org_Inrg_R$avg_h2S),], aes(y=depth_m, x=avg_h2S*2000), color="lightsalmon4", size=2, linetype="dashed")+
+  scale_x_continuous(sec.axis = sec_axis(~./2000, name = "Hydrogen Sulphide (mg/L)"))+
+   scale_y_reverse(limits = c(21,1), breaks=c(19, 17, 15.5, 15, 14, 13, 11,9, 7,5, 3, 1))+
+    theme_bw()+
+     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+              theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+    xlab("Ammonium (µg/L)")+
+    theme(axis.title.x.top = element_text(color = "lightsalmon4"))+
+    theme(axis.title.x.bottom = element_text(color = "black"))+
+    ylab("Depth (m)") +
+   # theme(axis.title.y = element_blank())+
+  #  theme(axis.text.y = element_blank())+
+  #  theme(axis.ticks.y = element_blank())+
+     annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=12.5, alpha=0.1, fill="green4")+
+   annotate("rect", xmin=-Inf, xmax=Inf, ymin=12.5, ymax=13.5, alpha=0.2, fill="deeppink4")+
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=13.5, ymax=15.5, alpha=0.5, fill="deeppink4")+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=15.5, ymax=16.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=16.5, ymax=Inf, alpha=0.2, fill="pink4")+
+   annotate("segment", x = 0, xend = 0, y =5, yend = 9,
+  colour = "lightsalmon4", size=2, linetype = "dashed")
+ 
+#Fig.1 (F) 
+ 
+ shsh<- ggplot(data=finalPP_chl23, aes(x=Depth)) + theme_bw()+
+  geom_point(data=finalPP_chl23%>% dplyr:: filter(Reaction=="Light"), aes(y = netPP*15, colour="Net"), size=3.5)+
+  geom_line(data=finalPP_chl23%>% dplyr::filter(Reaction=="Light"), aes(y = as.numeric(netPP*15), x=Depth),linetype = "dashed", colour="lightsalmon4", size=2)+
+   scale_x_reverse(limits = c(21,1), breaks=c(19, 17, 15.5, 15,14, 13, 11, 9, 7,5, 3, 1))+
+        theme(legend.title=element_text(size=22), legend.text = element_text(size=20, face = "bold"))+
+  coord_flip()+
+        theme(legend.position = c(0.65, 0.93), legend.direction = "vertical",
+                   legend.background = element_rect(size=0.3, 
+                                   colour ="transparent", fill = "transparent"), legend.text = element_text(color = "black", size = 22))+
+  annotate("rect", ymin=-Inf, ymax=Inf, xmin=-Inf, xmax=12.5, alpha=0.1, fill="green4")+
+     annotate("rect", ymin=-Inf, ymax=Inf, xmin=12.5, xmax=13.5, alpha=0.2, fill="deeppink4")+
+     annotate("rect", ymin=-Inf, ymax=Inf, xmin=13.5, xmax=15.5, alpha=0.5, fill="deeppink4")+
+     annotate("rect", ymin=-Inf, ymax=Inf, xmin=15.5, xmax=16.5, alpha=0.2, fill="deeppink4")+
+     annotate("rect", ymin=-Inf, ymax=Inf, xmin=16.5, xmax=Inf, alpha=0.2, fill="pink4")+
+       theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+  coord_flip()  + ylab("Secondary Production (ngC L-1 H-1)") + 
+  theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line 
+  )+
+  theme(axis.title.y = element_blank())+
+    theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())+
+       theme(axis.title.x.top = element_text(color = "lightsalmon4"))+
+ theme(legend.key = element_rect(colour = "transparent", fill = "transparent"))+
+                  theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+  geom_point(profiles_cbp, mapping= aes(y=profiles_cbp$BP_ng, x=profiles_cbp$depth_m, color= "SP"), size=3.5)+
+   scale_colour_manual("", breaks = c("Net", "SP"),
+  values = c("lightsalmon4", "black"), labels=c("PP (Net)", "Secondary Production"))+
+    scale_y_continuous(sec.axis = sec_axis(~./15, name = "Net Primary Production (ngC L-1 H-1)"))+
+  geom_errorbar(data=profiles_cbp, mapping= aes(ymin=BP_ng-SD_BP, ymax=BP_ng+SD_BP, x=profiles_cbp$depth_m), width=.3,
+                           position=position_dodge(0.1), inherit.aes = FALSE)+
+  geom_segment(aes(x = 1 , y = 6.270689, xend = 5, yend = 6.270689), linetype="dashed", color = "black", size=2)+
+          geom_segment(aes(x = 5 , y = 6.270689, xend = 6, yend = 25.8), linetype="dashed", color = "black", size=2)+
+  geom_segment(aes(x = 6 , y = 25.8, xend = 7, yend = 11.7), linetype="dashed", color = "black", size=2)+
+  geom_segment(aes(x = 7 , y = 11.7, xend = 8, yend =  30.0), linetype="dashed", color = "black", size=2)+
+  geom_segment(aes(x = 8 , y = 30.0, xend = 9, yend = 43.0), linetype="dashed", color = "black", size=2)+
+  geom_segment(aes(x = 9 , y = 43.0, xend = 10, yend = 36.2), linetype="dashed", color = "black", size=2)+
+  geom_segment(aes(x = 10 , y = 36.2, xend = 11, yend = 35.7), linetype="dashed", color = "black", size=2)+
+  geom_segment(aes(x = 11 , y = 35.7, xend = 13, yend = 72.7), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 13 , y = 72.7, xend = 13.5, yend = 407), linetype="solid", color = "black", size=2)+
+  geom_segment(aes(x = 13.5 , y = 407, xend = 14, yend = 382), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 14 , y = 382, xend = 14.5, yend = 399), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 14.5 , y = 399, xend = 15, yend = 483), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 15 , y = 483, xend = 15.5, yend = 496), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 15.5 , y = 496, xend = 16, yend = 387), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 16 , y = 387, xend = 17, yend = 258), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 17 , y = 258, xend = 19, yend = 230), linetype="solid", color = "black", size=2)+
+  theme(legend.box.background = element_rect(colour = "black",   fill = "transparent"))+
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "none")
+  
+ 
+ #Fig.1 (G) 
+  profiles_POC<- Org_Inrg_R[!is.na(Org_Inrg_R$POC),]
+   DOC<- ggplot(profiles_POC, aes(x=DOC, y=depth_m))+
+    theme_bw()+
+      geom_point(size=3.5)+
+     geom_path(size=2, linetype="solid")+
+   
+    #    scale_x_continuous(sec.axis = sec_axis(~.*1, name = "SiO2 (mg/L)"))+
+  #  geom_path(data=profiles_POC, aes(x=SiO2_mg_L/1, y=depth_m), color="lightsalmon4", size=2, linetype="solid")+
+   #     geom_point(data=profiles_POC, aes(x=SiO2_mg_L/1, y=depth_m), color="lightsalmon4", size=3.5)+
+    xlab("DOC (ppm)") +
+    ylab("Depth (m)") +
+    geom_point(color= "black", size=3.5)+ 
+      scale_y_reverse(limits = c(21,1), breaks=c(19, 17, 15.5, 15,14, 13, 11,9, 7,5, 3, 1))+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=12.5, alpha=0.1, fill="green4")+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=12.5, ymax=13.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=13.5, ymax=15.5, alpha=0.5, fill="deeppink4")+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=15.5, ymax=16.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=16.5, ymax=Inf, alpha=0.2, fill="pink4")+
+    #geom_area(fill = "black", linetype="dashed", position = "left")+
+   theme_bw()+ 
+      theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+      theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+    # theme(axis.title.y = element_blank())+
+    #theme(axis.text.y = element_blank())+
+    #theme(axis.ticks.y = element_blank())+
+         theme(axis.text.x.top = element_text(color = "black"))+
+     theme(axis.title.x.top = element_text(color = "lightsalmon4"))+
+        geom_segment(aes(x = 2.0580 , y = 17, xend = 2.05, yend = 19), linetype="solid", color = "black", size=2)+
+       theme(axis.title.y = element_blank())+
+    theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())+
+     
+         scale_x_continuous(sec.axis = sec_axis(~.*2, name = "POC (ppm)"))+
+       geom_point(data=profiles_POC, aes(y=depth_m, x=POC/2), color="lightsalmon4", size=3.5)+
+    geom_path(data=profiles_POC[!is.na(profiles_POC$POC),], aes(y=depth_m, x=POC/2), color="lightsalmon4", size=2, linetype="solid")+
+              theme(axis.title.x.top = element_text(color = "lightsalmon4"))
+   
+   
+   #Fig.1 (H) 
+
+   
+    profiles_PON<- Org_Inrg_R[!is.na(Org_Inrg_R$PON),]
+        profiles_POS<- Org_Inrg_R[!is.na(Org_Inrg_R$POS),]
+
+
+   PON<- ggplot(profiles_PON, aes(x=PON, y=depth_m))+
+    geom_point() + theme_bw()+
+    geom_path(na.rm = T) +
+   # ggtitle("E. Particulate Organic Nitrogen") +
+    xlab("PON (ppm)") +
+    ylab("") +
+    geom_point(color= "black", size=3.5)+ 
+    geom_path(size=2)+
+    #geom_area(fill = "black", linetype="dashed", position = "left")+
+      scale_y_reverse(limits = c(21,1), breaks=c(19, 17, 15, 13, 11,9, 7,5, 3, 1))+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=-Inf, ymax=12.5, alpha=0.1, fill="green4")+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=12.5, ymax=13.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=13.5, ymax=15.5, alpha=0.5, fill="deeppink4")+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=15.5, ymax=16.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", xmin=-Inf, xmax=Inf, ymin=16.5, ymax=Inf, alpha=0.2, fill="pink4")+
+    #geom_area(fill = "black", linetype="dashed", position = "left")+
+   theme_bw()+ theme(panel.border = element_rect(colour = "black", fill=NA))+
+    theme(axis.title.y = element_blank())+
+    theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())+
+      theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+      theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+       scale_x_continuous(sec.axis = sec_axis(~.*0.65, name = "POS (ppm)"))+
+      theme(axis.title.x.top = element_text(color = "lightsalmon4"))+
+    theme(axis.title.x.bottom = element_text(color = "black"))+
+      geom_path(data=profiles_POS, aes(y= depth_m, x = POS/0.65), colour="lightsalmon4", size=2)+
+      geom_point(data=profiles_POS, aes(y= depth_m, x = POS/0.65), colour="lightsalmon4", size=3.5)
+ 
+ 
+figure1<- (plot_spacer() | TurbvOxy123| Temp_LC_cond123| chlpar) / ( H2S_Amm | shsh| DOC | PON )  +
+     plot_annotation(tag_levels = 'A', , tag_prefix = '(',
+                         tag_suffix = ')') & 
+  theme(plot.tag = element_text(size = 26, face = "bold")) 
+
+figure1
+
+```
+
+```{r fig.2, echo=TRUE}
+plp_vlp <- read.csv("~/PLP_VLP_R.csv")
+
+
+     total_cell<- ggplot(plp_vlp, aes(x=as.numeric(Depth), y=TCell_cnt_ml)) + 
+    #geom_line(size=2) +
+    geom_point(size=3.5)+
+  geom_errorbar(data=plp_vlp, aes(ymin=TCell_cnt_ml-TCell_cnt_SD, ymax=TCell_cnt_ml+TCell_cnt_SD), width=.2,
+                  position=position_dodge(0.05))+
+    scale_x_reverse(limits = c(21,1), breaks=c(19, 17, 15.5, 15, 14, 13, 11,9, 7,5, 3, 1))+
+   # ggtitle("A. Total Cell Count")+
+    ylab("Total Cell count/mL")+ 
+    xlab("Depth (m)")+
+    theme(axis.text=element_text(size=24),
+          axis.title=element_text(size=24,face="bold"))+
+    scale_y_continuous(limits = c(0, 1000000), labels = scales::scientific)+
+  coord_flip() + theme_bw()+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=-Inf, xmax=12.5, alpha=0.1, fill="green4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=12.5, xmax=13.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=13.5, xmax=15.5, alpha=0.5, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=15.5, xmax=16.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=16.5, xmax=Inf, alpha=0.2, fill="pink4")+
+    theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+    theme(axis.line = element_line(color = "black"))+
+    scale_x_reverse(limits = c(21,1), breaks=c(17, 15, 15.5,14, 13, 11,9, 7,5, 3, 1))+
+    theme(legend.position = "none")+
+     theme(axis.text=element_text(size=24),
+          axis.title=element_text(size=24,face="bold"))+
+    theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line
+  )+ geom_segment(aes(x = 1 , y = 104666.67, xend = 2, yend = 106000), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 2 , y = 106000, xend = 3, yend = 95666), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 3 , y = 95666, xend = 4, yend = 164000), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 4 , y = 164000, xend = 5, yend =  86666), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 5 , y = 86666, xend = 6, yend = 150000), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 6 , y = 150000, xend = 7, yend = 157333), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 7 , y = 157333, xend = 8, yend = 74666), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 8 , y = 74666, xend = 9, yend = 73000), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 9 , y = 73000, xend =10, yend = 87666), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 10 , y = 87666, xend = 11, yend = 104333), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 11 , y = 104333, xend = 12, yend = 110666), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 12 , y = 110666, xend = 13, yend = 95333), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 13 , y = 95333, xend = 13.5, yend = 152666), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 13.5 , y = 152666, xend = 14, yend = 742000), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 14 , y = 742000, xend = 15, yend = 905000), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 15 , y = 905000, xend = 15.5, yend = 585000), linetype="solid", color = "black", size=2)+
+        geom_segment(aes(x = 15.5 , y = 585000, xend = 16, yend = 461000), linetype="solid", color = "black", size=2)+
+        geom_segment(aes(x = 16 , y = 461000, xend = 17, yend = 434666), linetype="solid", color = "black", size=2)+
+        geom_segment(aes(x = 17 , y = 434666, xend = 18, yend = 450666), linetype="solid", color = "black", size=2)+
+        geom_segment(aes(x = 18 , y = 450666, xend = 19, yend = 397000), linetype="solid", color = "black", size=2)
+     
+
+
+FlowVLP78abc<- ggplot(plp_vlp, aes(x=as.numeric(Depth), y=VLP_p_ml)) + 
+    #geom_line(size=2) +
+    geom_point(size=3.5)+
+  geom_errorbar(data=plp_vlp, aes(ymin=VLP_p_ml-VLP_sd_ml, ymax=VLP_p_ml+VLP_sd_ml), width=.2,
+                  position=position_dodge(0.05))+
+    scale_x_reverse(limits = c(21,1), breaks=c(19, 17, 15.5, 15, 14, 13, 11,9, 7,5, 3, 1))+
+  coord_flip()+
+  theme_bw()+
+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=-Inf, xmax=12.5, alpha=0.1, fill="green4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=12.5, xmax=13.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=13.5, xmax=15.5, alpha=0.5, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=15.5, xmax=16.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=16.5, xmax=Inf, alpha=0.2, fill="pink4")+
+  theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line
+  )+
+   ylab("Virus-like-particles/mL")+
+    xlab("Depth (m)")+
+    #ggtitle("A. Abundance of VLPs")+
+  theme(axis.text=element_text(size=21.5),
+          axis.title=element_text(size=24,face="bold"))+
+  #theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y= element_blank())+
+ geom_segment(aes(x = 3 , y = 72734310.2367783, xend = 5, yend = 70269433.106576), linetype="dashed", color = "black", size=2)+
+
+    geom_segment(aes(x = 5 , y= 70269433.106576, xend = 11, yend = 171345477.337887), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 11 , y = 171345477.337887, xend = 13, yend = 152087893.881184), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 13 , y = 152087893.881184, xend = 15, yend = 142709765.825333), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 15 , y = 142709765.825333, xend = 15.5, yend = 148248347.274825), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 15.5 , y = 148248347.274825, xend = 17, yend = 140365461.613217), linetype="solid", color = "black", size=2)+
+     geom_segment(aes(x = 17 , y = 140365461.613217, xend = 19, yend = 143954609.653385), linetype="solid", color = "black", size=2, arrow = arrow(type = "open", angle = 30, length = unit(0.15, "inches")))+
+       theme(axis.text=element_text(size=24),axis.title=element_text(size=24))+
+   theme(axis.title.y = element_blank())+
+    theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())
+
+
+
+vmr2<- ggplot()+ theme_bw()+
+  geom_point(data=subset(plp_vlp, !is.na(VMR)), aes(y=VMR, x=as.numeric(Depth)), size=3.5, color= "black")+
+     geom_segment(aes(x = 3 , y = 760.28, xend = 5, yend = 810.801), linetype="dashed", color = "black", size=2)+
+      geom_segment(aes(x = 5 , y = 810.801, xend = 11, yend = 1642.288), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 11 , y = 1642.288, xend = 13, yend = 1595.327), linetype="dashed", color = "black", size=2)+
+     geom_segment(aes(x = 13 , y = 1595.327, xend = 15, yend = 157.690), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 15 , y = 157.690, xend = 15.5, yend = 253.416), linetype="solid", color = "black", size=2)+
+     geom_segment(aes(x = 15.5 , y = 253.416, xend = 17, yend = 322.926), linetype="solid", color = "black", size=2)+
+     geom_segment(aes(x = 17 , y = 322.926, xend = 19, yend = 362.606), linetype="solid", color = "black", size=2, arrow = arrow(type = "open", angle = 30, length = unit(0.15, "inches")))+
+     theme(axis.title.x.top = element_text(color = "black"))+
+    theme(axis.text=element_text(size=24),
+          axis.title=element_text(size=24,face="bold"))+
+  coord_flip()+
+     theme(axis.title.y = element_blank())+
+    theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())+
+  scale_x_reverse(limits = c(21,1), breaks=c(19, 17, 15.5, 15, 14, 13, 11,9, 7,5, 3, 1))+
+  theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line
+  )+
+   annotate("rect", ymin=-Inf, ymax=Inf, xmin=-Inf, xmax=12.5, alpha=0.1, fill="green4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=12.5, xmax=13.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=13.5, xmax=15.5, alpha=0.5, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=15.5, xmax=16.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=16.5, xmax=Inf, alpha=0.2, fill="pink4")+
+  ylab("Virus-to-microbe-ratio (VMR)")
+
+
+fig.2<- (total_cell | FlowVLP78abc | vmr2) +
+    plot_annotation(tag_levels = 'A', tag_prefix = '(',
+                         tag_suffix = ')') & 
+  theme(plot.tag = element_text(size = 26, face = "bold"))
+fig.2
+
+```
+
+```{r fig.3, echo=TRUE}
+AA_Genus <- read.csv("~/Genus_100_p.csv")
+gpsfSI2 <- read.csv("~/Phylum_100cells.csv")
+
+
+#Fig 3(A)
+jascolor1<-    c("steelblue","#56B4E9", "lightblue1","burlywood1","burlywood3","burlywood4", "thistle1", "thistle2",   "palegreen",  "chartreuse3", "chartreuse4", "snow2", "snow3", "snow4", "dimgray", "plum1", "plum3","plum4","tan2", "tan3")  #Picking colors
+
+ yv1a_CC <-        ggplot(data = gpsfSI2,
+                            mapping = aes_string(x ="Sample",fill="Phylum",y="AA_Phylum"))+
+    geom_bar(stat="identity")+
+    theme(legend.position="none")+
+    ylab("Absolute Abundance (>100 Cells/mL)")+
+    coord_flip()+                   
+    theme_bw()+
+    xlab("Depth (m)")+
+    scale_x_discrete(labels=c("LC-19m-E1"="19","LC-17m-E1"="17",
+                              "LC-15point5m-E1"="15.5", 
+                              "Cadagno15m-E2"="15", "LC-13m-E1"="13", "LC-11m-E1"="11","LC-9m-E1"="9",
+                              "Cadagno7m-E2"="7", "LC-5m-E1"="5", "LC-3m-E1"="3"), 
+                      limits=c("", "LC-19m-E1","LC-17m-E1"," ","LC-15point5m-E1", "Cadagno15m-E2",
+                           "LC-13m-E1"," ", "LC-11m-E1", "LC-9m-E1", "Cadagno7m-E2",
+                              "LC-5m-E1", "LC-3m-E1", "")) +  
+    scale_fill_manual(values = (jascolor1))+
+    theme(legend.box.background = element_rect(color="white", size=2), panel.border = element_rect(colour = "black", fill=NA, size=2))+
+      theme(axis.text = element_text(size = 12))+
+     guides(fill=guide_legend(nrow = 8, title=" A. Phylum"))+
+     ggtitle("A. Absolute Abundance of Lake Cadagno Bacterial Communites (Phylum)" )+
+   theme(axis.text=element_text(size=14),
+          axis.title=element_text(size=14,face="bold"), legend.text = element_text(size=12))+
+        xlab("Depth (m)")+
+    theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line 91A84C
+  )+
+  #theme(axis.title.y = element_blank(), axis.ticks.y = element_blank())+
+    theme(plot.title = element_text(size = 16, face = "bold"))+ 
+   # theme(legend.key.width=unit(1.5, "cm"))+
+
+      annotate(geom="text", x=8, y=150000, label="Chemocline",
+              color="black", size=5.5)+
+      annotate(geom="text", x=14, y=150000, label="Mixolimnion",
+              color="black", size=5.5) + 
+      annotate(geom="text", x=4, y=152000, label="Monimolimnion",
+              color="black", size=5.5)+
+   theme(legend.position = c(0.55, 0.75), legend.background = element_rect(size=0.3, 
+                                           colour ="white"),  legend.direction = "vertical")+
+  theme(legend.title=element_text(size=12, face="bold"), 
+    legend.text=element_text(size=12), axis.ticks.y = element_blank())+  scale_y_continuous(labels = scales::scientific, breaks = scales::pretty_breaks(n = 6))+
+         theme (legend.box.background = element_rect(colour = "black"))
+ 
+
+ #Fig 3(B)
+ 
+  jascolor1a<-    c("steelblue","#56B4E9", "lightblue1","lightcyan2","burlywood1","burlywood3","burlywood4", "plum1","plum3","plum4", "snow2", "snow3", "snow4", "dimgray", "palevioletred2", "hotpink1", "hotpink3", "tan2", "tan3", "tan4", "tomato1", "tomato3","tomato4", "seagreen1","seagreen3","seagreen4")
+                 
+
+   Phylum_proteobacteria<- AA_Genus[which(AA_Genus$Phylum=="Proteobacteria"), ]
+  Phylum_proteobacteria<- Phylum_proteobacteria[which(Phylum_proteobacteria$AA_Genus>=1000), ]
+ 
+   ProtOTU2_P <-        ggplot(data = Phylum_proteobacteria,
+                   mapping = aes_string(x ="Sample",y="AA_Genus",fill="Genus"))+
+                   geom_bar(stat="identity")+
+                   theme(legend.position="right")+
+                   #geom_text(aes(label=OTU),position=position_stack(0.5), angle = -90)+
+                   # geom_label_repel(aes(label=OTU), position=position_stack(0.5))+
+                   ylab("Absolute Abundance (>1000 Cells/mL)")+
+                                     coord_flip()+                   theme_bw()+
+                   scale_fill_manual(values = c(jascolor1a))+
+                   xlab("Depth (m)")+
+                   scale_x_discrete(labels=c("LC-19m-E1"="19","LC-17m-E1"="17",
+                              "LC-15point5m-E1"="15.5", 
+                              "Cadagno15m-E2"="15", "LC-13m-E1"="13", "LC-11m-E1"="11","LC-9m-E1"="9",
+                              "Cadagno7m-E2"="7", "LC-5m-E1"="5", "LC-3m-E1"="3"), 
+                      limits=c("", "LC-19m-E1","LC-17m-E1"," ","LC-15point5m-E1", "Cadagno15m-E2",
+                              "LC-13m-E1"," ", "LC-11m-E1", "LC-9m-E1", "Cadagno7m-E2",
+                              "LC-5m-E1", "LC-3m-E1", "")) +  
+                   theme(legend.position = "left")+
+                   theme(axis.text = element_text(size = 12))+
+                   theme(axis.title = element_text(size = 12),  legend.box.background = element_rect(color="white",                    size=01), panel.border = element_rect(colour = "black", fill=NA, size=2))+
+                   guides(fill=guide_legend(nrow=11, title.position = "top"))+
+                   ggtitle("B. Absolute Abundance of Proteobacteria (Genus)" )+
+                   theme(legend.position="right")+
+                   theme(axis.text=element_text(size=14),
+                   axis.title=element_text(size=14,face="bold"))+
+                   xlab("")+
+                   theme(
+                  # Hide panel borders and remove grid lines
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),
+                   # Change axis line
+                        )+
+                   theme(axis.ticks.y = element_blank())+
+              
+  theme(plot.title = element_text(size = 16, face = "bold"))+
+  theme(legend.position = c(0.53, 0.75), legend.direction = "vertical",
+                   legend.background = element_rect(size=0.3, 
+                                   colour ="transparent", fill = "transparent"), legend.text = element_text(color = "black"))+
+guides(fill=guide_legend(nrow=13, title= "B. Genus"))+
+  theme(legend.title=element_text(size=12, face = "bold"), legend.text=element_text(size=12))+
+        scale_y_continuous(labels = scales::scientific)+
+     theme (legend.box.background = element_rect(colour = "black"))+
+     xlab("Depth (m)")
+   
+   
+   
+   
+   #Fig 3(C)
+   
+    Phylum_Bacteroidetes<- AA_Genus[which(AA_Genus$Phylum=="Bacteroidetes"), ]
+    Phylum_Bacteroidetes<- Phylum_Bacteroidetes[which(Phylum_Bacteroidetes$AA_Genus>=1000), ]
+
+
+   jascolor1b<-    c("steelblue","#56B4E9", "lightblue1","navajowhite4","bisque3", "snow3", "snow4", "dimgray", "plum4", "plum3", "plum1", "tan2")
+    ProtOTU2_B <-        ggplot(data = Phylum_Bacteroidetes,
+                   mapping = aes_string(x ="Sample",y="AA_Genus",fill="Genus"))+
+                   geom_bar(stat="identity")+
+                   theme(legend.position="right")+
+                   #geom_text(aes(label=OTU),position=position_stack(0.5), angle = -90)+
+                   # geom_label_repel(aes(label=OTU), position=position_stack(0.5))+
+                   ylab("Absolute Abundance (>1000 Cells/mL)")+
+                                     coord_flip()+                   theme_bw()+
+                   scale_fill_manual(values = c(jascolor1a))+
+                   xlab("Depth (m)")+
+                   scale_x_discrete(labels=c("LC-19m-E1"="19m","LC-17m-E1"="17m",
+                              "LC-15point5m-E1"="15.5m", 
+                              "Cadagno15m-E2"="15m", "LC-13m-E1"="13m", "LC-11m-E1"="11m","LC-9m-E1"="9m",
+                              "Cadagno7m-E2"="7m", "LC-5m-E1"="5m", "LC-3m-E1"="3m"), 
+                      limits=c("", "LC-19m-E1","LC-17m-E1"," ","LC-15point5m-E1", "Cadagno15m-E2",
+                              "LC-13m-E1"," ", "LC-11m-E1", "LC-9m-E1", "Cadagno7m-E2",
+                              "LC-5m-E1", "LC-3m-E1", "")) +  
+                   theme(legend.position = "left")+
+                   theme(axis.text = element_text(size = 12))+
+                   theme(axis.title = element_text(size = 12),  legend.box.background = element_rect(color="white",                    size=01), panel.border = element_rect(colour = "black", fill=NA, size=2))+
+                   guides(fill=guide_legend(ncol=2, title.position = "top"))+
+                   ggtitle("C. Absolute Abundance of Bacteroidetes (Genus)" )+
+                   theme(legend.position="right")+
+                   theme(axis.text=element_text(size=14),
+                   axis.title=element_text(size=14,face="bold"))+
+                   xlab("")+
+                   theme(
+                  # Hide panel borders and remove grid lines
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),
+                   # Change axis line
+                        )+
+                   theme(axis.title.y = element_blank(), axis.ticks.y = element_blank(), axis.text.y =                                 element_blank())+
+              
+  theme(plot.title = element_text(size = 16, face = "bold"))+
+  theme(legend.position = c(0.63, 0.75), legend.direction = "vertical",
+                   legend.background = element_rect(size=0.3, 
+                                   colour ="transparent", fill = "transparent"), legend.text = element_text(color = "black"))+
+guides(fill=guide_legend(nrow=13, title="C. Genus" ))+     
+  theme(legend.title=element_text(size=12, face = "bold"), legend.text=element_text(size=12))+
+              scale_y_continuous(labels = scales::scientific)+
+           theme (legend.box.background = element_rect(colour = "black"))
+    
+    
+  figure2<-   yv1a_CC / (ProtOTU2_P | ProtOTU2_B)#16.8x16.8
+  
+  
+  
+ #Fig S(2)
+ 
+ pieipe3_ABN <-        ggplot(data = gpsfSI2,
+                          mapping = aes_string(x=  "Sample", y="Abundance_P", fill="Phylum"))+ theme_bw()+
+     geom_bar(stat="identity")+
+    theme(legend.position="right")+ 
+     scale_fill_manual(values = (jascolor1))+
+    theme(legend.box.background = element_rect(color="white", size=2), panel.border = element_rect(colour = "black", fill=NA, size=2))+
+      theme(axis.text = element_text(size = 12))+
+     guides(fill=guide_legend(ncol = 1, title="A. Phylum"))+
+     ggtitle("A. Relative Abundance of Lake Cadagno Bacterial Communites (Phylum)" )+
+   theme(axis.text=element_text(size=14),
+          axis.title=element_text(size=14,face="bold"), legend.text = element_text(size=12))+
+        xlab("Depth (m)")+
+    theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line 91A84C
+  ) +
+  #theme(axis.title.y = element_blank(), axis.ticks.y = element_blank())+
+    theme(plot.title = element_text(size = 16, face = "bold"))+ 
+   # theme(legend.key.width=unit(1.5, "cm"))+
+
+  theme(legend.title=element_text(size=12, face="bold"), 
+    legend.text=element_text(size=12), axis.ticks.y = element_blank())+
+    theme(legend.position = "right")+
+    coord_flip()+  scale_x_discrete(labels=c("LC-19m-E1"="19","LC-17m-E1"="17",
+                              "LC-15point5m-E1"="15.5", 
+                              "Cadagno15m-E2"="15", "LC-13m-E1"="13", "LC-11m-E1"="11","LC-9m-E1"="9",
+                              "Cadagno7m-E2"="7", "LC-5m-E1"="5", "LC-3m-E1"="3"), 
+                      limits=c("", "LC-19m-E1","LC-17m-E1"," ","LC-15point5m-E1", "Cadagno15m-E2",
+                           "LC-13m-E1"," ", "LC-11m-E1", "LC-9m-E1", "Cadagno7m-E2",
+                              "LC-5m-E1", "LC-3m-E1", ""))+
+    ylab("Relative Abundance (>100 Cells/mL)")+
+     annotate(geom="text", x=8, y=50, label="Chemocline",
+              color="black", size=5.5)+
+      annotate(geom="text", x=14, y=50, label="Mixolimnion",
+              color="black", size=5.5) + 
+      annotate(geom="text", x=4, y=50, label="Monimolimnion",
+              color="black", size=5.5)
+ 
+ 
+ 
+ palette1 <- distinctColorPalette(68)
+
+  
+    Relative_Genus<- AA_Genus[which(AA_Genus$AA_Genus>=5000), ]
+
+  
+    pieipe3_ABN_Genus <-        ggplot(data = Relative_Genus,
+                          mapping = aes_string(x=  "Sample", y="AA_Genus", fill="Phylum_Genus"))+ theme_bw()+
+     geom_bar(stat="identity")+
+    theme(legend.position="right")+ 
+     scale_fill_manual(values = (palette1))+
+    
+    theme(legend.box.background = element_rect(color="white", size=2), panel.border = element_rect(colour = "black", fill=NA, size=2))+
+      theme(axis.text = element_text(size = 12))+
+     guides(fill=guide_legend(ncol = 1, title="B. Phylum|Genus"))+
+     ggtitle("B. Absolute Abundance of Lake Cadagno Bacterial Communites (Genus)" )+
+   theme(axis.text=element_text(size=14),
+          axis.title=element_text(size=14,face="bold"), legend.text = element_text(size=12))+
+        xlab("Depth (m)")+
+    theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line 91A84C
+  ) +
+  #theme(axis.title.y = element_blank(), axis.ticks.y = element_blank())+
+    theme(plot.title = element_text(size = 16, face = "bold"))+ 
+   # theme(legend.key.width=unit(1.5, "cm"))+
+
+  theme(legend.title=element_text(size=12, face="bold"), 
+    legend.text=element_text(size=12), axis.ticks.y = element_blank())+
+    theme(legend.position = "right")+
+    coord_flip()+  scale_x_discrete(labels=c("LC-19m-E1"="19","LC-17m-E1"="17",
+                              "LC-15point5m-E1"="15.5", 
+                              "Cadagno15m-E2"="15", "LC-13m-E1"="13", "LC-11m-E1"="11","LC-9m-E1"="9",
+                              "Cadagno7m-E2"="7", "LC-5m-E1"="5", "LC-3m-E1"="3"), 
+                      limits=c("", "LC-19m-E1","LC-17m-E1"," ","LC-15point5m-E1", "Cadagno15m-E2",
+                           "LC-13m-E1"," ", "LC-11m-E1", "LC-9m-E1", "Cadagno7m-E2",
+                              "LC-5m-E1", "LC-3m-E1", ""))+
+    ylab("Absolute Abundance in Cells/ml (>5000 Cells/mL) ")+
+     annotate(geom="text", x=8, y=2e+05, label="Chemocline",
+              color="black", size=5.5)+
+      annotate(geom="text", x=14, y=2e+05, label="Mixolimnion",
+              color="black", size=5.5) + 
+      annotate(geom="text", x=4, y=2e+05, label="Monimolimnion",
+              color="black", size=5.5)+
+           guides(fill=guide_legend(ncol = 1, title="B. Phylum|Genus"))
+
+    
+    #fig.S2<- ggarrange(pieipe3_ABN, pieipe3_ABN_Genus, ncol = 2)
+    fig.S2<- pieipe3_ABN | pieipe3_ABN_Genus
+    
+
+```
+```{r fig.4, echo=TRUE}
+
+ cyano_cnt_R <- read.csv("~/Total_cyano_cells_avg.csv") #Flow-cytometry Cyanobacteria-like
+ uahbs234ab_cyna_CPF <- read.csv("~/Cyanobacteria_AA.csv") #16s Cyanobacteria
+ 
+#Fig 4 (A)
+ p_c<- ggplot(cyano_cnt_R, aes(x=Depth, y=Cyn_Cells_mean)) + 
+    geom_point(size=3.5)+
+    geom_errorbar(aes(ymin=Cyn_Cells_mean-Cyn_Cells_sd, ymax=Cyn_Cells_mean+Cyn_Cells_sd), width=.2,
+                  position=position_dodge(0.05))+ coord_flip()+
+    ylab("Flow-cytometry Cyanobacteria-like (Cells/mL)")+ 
+    xlab("Depth (m)")+
+    theme(axis.text=element_text(size=24),
+          axis.title=element_text(size=24,face="bold"))+
+  coord_flip() + theme_bw()+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=-Inf, xmax=12.5, alpha=0.1, fill="green4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=12.5, xmax=13.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=13.5, xmax=15.5, alpha=0.5, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=15.5, xmax=16.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=16.5, xmax=Inf, alpha=0.2, fill="pink4")+
+    theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+    theme(axis.line = element_line(color = "black"))+
+    scale_x_reverse(limits = c(21,1), breaks=c(17, 15, 15.5,14, 13, 11,9, 7,5, 3, 1))+
+    theme(legend.position = "none")+
+     theme(axis.text=element_text(size=24),
+          axis.title=element_text(size=24,face="bold"))+
+    theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line
+  )+
+  
+    # theme(axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y= element_blank())+
+      geom_segment(aes(x = 1 , y = 23666, xend = 2, yend = 25333), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 2 , y = 25333, xend = 3, yend = 21666), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 3 , y = 21666, xend = 4, yend = 32333), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 4 , y = 32333, xend = 5, yend =  41666), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 5 , y = 41666, xend = 6, yend = 52333), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 6 , y = 52333, xend = 7, yend = 42333), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 7 , y = 42333, xend = 8, yend = 30666), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 8 , y = 30666, xend = 9, yend = 43666), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 9 , y = 43666, xend =10, yend = 43333), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 10 , y = 43333, xend = 11, yend =  25333), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 11 , y =  25333, xend = 12, yend =  40333), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 12 , y =  40333, xend = 13, yend = 29000), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 13 , y = 29000, xend = 13.5, yend = 24500), linetype="dashed", color = "black", size=2)+
+    geom_segment(aes(x = 13.5 , y = 24500, xend = 14, yend = 309333), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 14 , y = 309333, xend = 15, yend = 212333), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 15 , y = 212333, xend = 15.5, yend = 190000), linetype="solid", color = "black", size=2)+
+        geom_segment(aes(x = 15.5 , y = 190000, xend = 16, yend = 171666), linetype="solid", color = "black", size=2)+
+        geom_segment(aes(x = 16 , y = 171666, xend = 17, yend = 166666), linetype="solid", color = "black", size=2)+
+        geom_segment(aes(x = 17 , y = 166666, xend = 18, yend = 169333), linetype="solid", color = "black", size=2)+
+        geom_segment(aes(x = 18 , y = 169333, xend = 19, yend = 148000), linetype="solid", color = "black", size=2)+
+  # scale_y_continuous(labels = scales::scientific
+#, sec.axis = sec_axis(~./12500, name = "Phycocyanin (μg/L)"))+
+ #       theme(axis.title.x.top = element_text(color = "lightsalmon4"))+
+  annotate("text", x = 2, y = 2e+05, label = "(- - -) 28 August 2017", colour = "black", size = 8.5)+   
+  annotate("text", x = 3, y = 2e+05, label = "( — ) 29 August 2017", colour = "black", size = 8.5)+
+          theme(panel.border = element_rect(colour = "black", fill=NA, size=2))+
+  expand_limits(x = 0, y = 0)
+
+
+#16s cyanobacteria AA uahbs234ab_cyna_CPF
+#Fig 4 (B)
+Phylum_cyano2abn_CC <-        ggplot(data = uahbs234ab_cyna_CPF,
+                            mapping = aes_string(x ="Sample",y="AA_Genus",fill="Genus"))+
+    geom_bar(stat="identity")+
+    theme(legend.position="right")+
+     theme(legend.text=element_text(size=24))+
+    ylab("Absolute Abundance Phylum (Cells/mL)")+
+    coord_flip()+                   theme_bw()+
+    xlab("Depth (m)")+
+    scale_fill_manual(values=c( "darkolivegreen3","darkred","darkblue", "#52854C", "orange"))+
+    scale_x_discrete(labels=c("LC-19m-E1"="19","LC-17m-E1"="17",
+                              "LC-15point5m-E1"="15.5", 
+                              "Cadagno15m-E2"="15", "LC-13m-E1"="13", "LC-11m-E1"="11","LC-9m-E1"="9",
+                              "Cadagno7m-E2"="7", "LC-5m-E1"="5", "LC-3m-E1"="3"), 
+                      limits=c("", "LC-19m-E1","LC-17m-E1"," ","LC-15point5m-E1", "Cadagno15m-E2",
+                              "LC-13m-E1"," ", "LC-11m-E1", "LC-9m-E1", "Cadagno7m-E2",
+                              "LC-5m-E1", "LC-3m-E1", "")) +  
+    theme(legend.position = "left")+
+    theme(legend.box.background = element_rect(color="white"), legend.direction = "vertical", panel.border = element_rect(colour = "black", fill=NA, size=2))+
+     guides(fill=guide_legend(ncol=1, title="Genus"))+
+    # ggtitle("Absolute Abundance Cyanobacteria (including Chloroplast)" )+
+   theme(axis.text=element_text(size=24),
+          axis.title=element_text(size=24,face="bold"))+
+       xlab("")+
+    theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line
+  )+
+  theme(axis.title.y = element_blank(), axis.ticks.y = element_blank())+
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+
+
+    yv1abz_Phylum_cyano2abn_CC<- Phylum_cyano2abn_CC + 
+      annotate(geom="text", x=8, y=10000, label="Chemocline",
+              color="black", size=8.5)+
+      annotate(geom="text", x=14, y=10000, label="Mixolimnion",
+              color="black", size=8.5) + 
+      annotate(geom="text", x=4, y=10000, label="Monimolimnion",
+              color="black", size=8.5)+
+   theme(axis.title.y = element_blank())+
+   # theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())+
+  theme(legend.title=element_text(size=24),
+    legend.text=element_text(size=24)) +
+      scale_y_continuous(labels = scales::scientific)+
+    theme(legend.position = c(0.65, 0.80), legend.background = element_rect(size=0.3, 
+                                           colour ="black"),  legend.direction = "vertical")+
+      theme(legend.title=element_text(size=26), 
+    legend.text=element_text(size=24))+
+     scale_y_continuous(labels = scales::scientific)+
+         theme(legend.key.width=unit(1.5, "cm"))+
+      theme(legend.key.size = unit(2.5, 'lines'))
+    
+    
+    #Fig 4 (C)
+       
+       uahbs234ab_cyna_CP3<- uahbs234ab_cyna_CPF[which(uahbs234ab_cyna_CPF$Genus=="Chloroplast_ge"), ]
+    
+     newOTU1BN <-        ggplot(data = uahbs234ab_cyna_CP3,
+                            mapping = aes_string(x ="Sample",y="AA_Genus",fill="OTU"))+
+    theme(legend.position="right")+
+        geom_bar(stat="identity")+
+     ylab("Absolute Abundance of Chloroplast (>100 Cells/ml)")+
+    theme(axis.text = element_text(size = 14))+
+    theme(axis.title = element_text(size = 14))+
+    coord_flip()+                   theme_bw()+ scale_fill_manual(values = c("darkolivegreen3", "#52854C",  "#B64AE3", "#D7E3A2", "#DE924F","orange", "#D7A7C7" ,"#D86EC3", "#BEA687","#7ADB99", "#D7D958", "#D2DEDB", "darkred","darkblue"))+
+    xlab("Depth (m)")+
+    theme(legend.position = "left")+
+      theme(axis.text = element_text(size = 14))+
+    theme(axis.title = element_text(size = 14),  legend.box.background = element_rect(color="black", size=01), panel.border = element_rect(colour = "black", fill=NA, size=2))+
+     guides(fill=guide_legend(ncol=2, title="OTU", legend.position = "top"))+
+     #ggtitle("Absolute Abundance of Chloroplast" )+
+       theme(legend.position="right")+
+   theme(axis.text=element_text(size=24),
+          axis.title=element_text(size=24,face="bold"))+
+       xlab("Depth (m)")+
+    theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line
+  )+
+    scale_x_discrete(labels=c("LC-19m-E1"="19","LC-17m-E1"="17",
+                              "LC-15point5m-E1"="15.5", 
+                              "Cadagno15m-E2"="15", "LC-13m-E1"="13", "LC-11m-E1"="11","LC-9m-E1"="9",
+                              "Cadagno7m-E2"="7", "LC-5m-E1"="5", "LC-3m-E1"="3"), 
+                      limits=c("", "LC-19m-E1","LC-17m-E1"," ","LC-15point5m-E1", "Cadagno15m-E2",
+                              "LC-13m-E1"," ", "LC-11m-E1", "LC-9m-E1", "Cadagno7m-E2",
+                              "LC-5m-E1", "LC-3m-E1", ""))+
+    annotate(geom="text", x=8, y=20000, label="Chemocline",
+              color="black", size=8.5)+
+      annotate(geom="text", x=14, y=20000, label="Mixolimnion",
+              color="black", size=8.5) + 
+      annotate(geom="text", x=4, y=20000, label="Monimolimnion",
+              color="black", size=8.5)+
+    theme(axis.ticks.y = element_blank())+
+      scale_y_continuous(labels = scales::scientific)+
+     theme(legend.position = c(0.65, 0.75))+
+     theme(legend.title=element_text(size=26), 
+    legend.text=element_text(size=24))+
+    theme(legend.key.width=unit(1.5, "cm"))+
+    theme(legend.key.size = unit(2.5, 'lines'))+
+           theme(axis.text.y = element_blank(), axis.title.y = element_blank())
+     
+     
+         #Fig 4 (D)
+     
+     uahbs234ab_cyna_CP2<- uahbs234ab_cyna_CPF[which(uahbs234ab_cyna_CPF$Genus=="Oxyphotobacteria_unclassified"), ]
+     
+     
+         newOTU2 <-        ggplot(data = uahbs234ab_cyna_CP2,
+                            mapping = aes_string(x ="Sample",y="AA_Genus",fill="OTU"))+
+    geom_bar(stat="identity")+
+    theme(legend.position="right")+
+     ylab("Absolute Abundance of Oxyphotobacteria (>100 Cells/ml)")+
+    theme(axis.text = element_text(size = 12))+
+    theme(axis.title = element_text(size = 12))+
+    coord_flip()+  
+     theme(axis.text = element_text(size = 14))+
+    theme(legend.box.background = element_rect(color="black", size=2), panel.border = element_rect(colour = "black", fill=NA, size=2))+
+   
+     theme_bw()+
+     scale_fill_manual(values = c("darkolivegreen3","darkred","darkblue", "#52854C", "orange"))+
+    xlab("Depth (m)")+
+    scale_x_discrete(labels=c("LC-19m-E1"="19m","LC-17m-E1"="17m",
+                              "LC-15point5m-E1"="15.5m", 
+                              "Cadagno15m-E2"="15m", "LC-13m-E1"="13m", "LC-11m-E1"="11m","LC-9m-E1"="9m",
+                              "Cadagno7m-E2"="7m", "LC-5m-E1"="5m", "LC-3m-E1"="3m"), 
+                      limits=c("", "LC-19m-E1","LC-17m-E1"," ","LC-15point5m-E1", "Cadagno15m-E2",
+                              "LC-13m-E1"," ", "LC-11m-E1", "LC-9m-E1", "Cadagno7m-E2",
+                              "LC-5m-E1", "LC-3m-E1", "")) +  
+    theme(legend.position = "left")+
+     guides(fill=guide_legend(ncol=2, title.position = "top"))+
+     #ggtitle("Absolute Abundance of Genus Unclassified_Oxyphotobacteria" )+
+       theme(legend.position="right")+
+   theme(axis.text=element_text(size=24),
+          axis.title=element_text(size=24,face="bold"))+
+       xlab("")+
+    theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line
+  )+
+  theme(axis.title.y = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank())+
+     theme(legend.position = c(0.65, 0.40))+
+     annotate(geom="text", x=8, y=3000, label="Chemocline",
+              color="black", size=8.5)+
+      annotate(geom="text", x=14, y=3000, label="Mixolimnion",
+              color="black", size=8.5) + 
+      annotate(geom="text", x=4, y=3000, label="Monimolimnion",
+              color="black", size=8.5)+
+      theme(legend.title=element_text(size=26), 
+    legend.text=element_text(size=24))+
+     scale_y_continuous(labels = scales::scientific)+
+         theme(legend.key.width=unit(1.5, "cm"), legend.box.background = element_rect(color="black", size=1))+
+     theme(legend.key.size = unit(2.5, 'lines'),  panel.border = element_rect(colour = "black", fill=NA, size=2))
+         
+       
+    #Fig S3 (A,B)     
+          
+         uahbs234ab_cyna2<-AA_Genus[!(AA_Genus$Genus=="Chloroplast_ge" | AA_Genus$Genus=="Oxyphotobacteria_unclassified"),]
+           #uahbs234ab_cyna2<- uahbs234ab_cyna2[which(uahbs234ab_cyna2$Abundance_P>=0.5), ]
+
+     uahbs234ab_cyna2BC<- uahbs234ab_cyna2[which(uahbs234ab_cyna2$Phylum=="Cyanobacteria"), ]
+     #   uahbs234ab_cyna2BC<- uahbs234ab_cyna2BC[which(uahbs234ab_cyna2BC$AA_Genus>=100), ]
+            uahbs234ab_cyna2BC = dplyr::mutate(uahbs234ab_cyna2BC, OTU_Genus = paste(OTU, Genus, sep='|'))
+
+        
+     jascolor<-    c("lightcyan2","lightblue1", "cadetblue1", "#56B4E9", "steelblue", "palegreen", "palegreen3", "chartreuse1", "chartreuse3", "chartreuse4",  "seagreen1","seagreen3","seagreen4", "hotpink4", "hotpink3", "hotpink1","palevioletred1", "palevioletred3", "thistle1", "thistle2","plum1", "plum3", "plum4","darkgoldenrod1", "darkgoldenrod2","darkgoldenrod4", "tan2","tan3", "tan4",  "snow2", "snow3", "snow4", "dimgray", "tomato1", "tomato3", "tomato4", "mediumdeeppink42", "mediumdeeppink43", "mediumdeeppink44","burlywood1","burlywood3","burlywood4")
+
+
+jascolor1x<-    c("steelblue","#56B4E9", "lightblue1","burlywood1","burlywood3","tomato3","burlywood4","tomato4",  "palegreen","thistle1", "snow2", "snow3", "snow4", "thistle2", "dimgray", "plum1", "plum3","plum4", "tan2", "tan3")
+          
+          yv1a_CC_Cyano <-        ggplot(data = uahbs234ab_cyna2,
+                            mapping = aes_string(x ="Sample",fill="Phylum",y="AA_Genus"))+
+    geom_bar(stat="identity")+
+    theme(legend.position="none")+
+    ylab("Absolute Abundance (>100 Cells/mL)")+
+    coord_flip()+                   
+    theme_bw()+
+    xlab("Depth (m)")+
+    scale_x_discrete(labels=c("LC-19m-E1"="19","LC-17m-E1"="17",
+                              "LC-15point5m-E1"="15.5", 
+                              "Cadagno15m-E2"="15", "LC-13m-E1"="13", "LC-11m-E1"="11","LC-9m-E1"="9",
+                              "Cadagno7m-E2"="7", "LC-5m-E1"="5", "LC-3m-E1"="3"), 
+                      limits=c("", "LC-19m-E1","LC-17m-E1"," ","LC-15point5m-E1", "Cadagno15m-E2",
+                           "LC-13m-E1"," ", "LC-11m-E1", "LC-9m-E1", "Cadagno7m-E2",
+                              "LC-5m-E1", "LC-3m-E1", "")) +  
+    scale_fill_manual(values = (jascolor1x))+
+    theme(legend.box.background = element_rect(color="white", size=2), panel.border = element_rect(colour = "black", fill=NA, size=2))+
+      theme(axis.text = element_text(size = 12))+
+     guides(fill=guide_legend(nrow = 8, title=" A. Phylum"))+
+     ggtitle("A. Absolute Abundance (Cyanobacteria Without Genus Chloroplast and Oxyphotobacteria)" )+
+   theme(axis.text=element_text(size=14),
+          axis.title=element_text(size=14,face="bold"), legend.text = element_text(size=12))+
+        xlab("Depth (m)")+
+    theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line 91A84C
+  )+
+  #theme(axis.title.y = element_blank(), axis.ticks.y = element_blank())+
+    theme(plot.title = element_text(size = 16, face = "bold"))+ 
+   # theme(legend.key.width=unit(1.5, "cm"))+
+
+      annotate(geom="text", x=8, y=150000, label="Chemocline",
+              color="black", size=5.5)+
+      annotate(geom="text", x=14, y=150000, label="Mixolimnion",
+              color="black", size=5.5) + 
+      annotate(geom="text", x=4, y=152000, label="Monimolimnion",
+              color="black", size=5.5)+
+   theme(legend.position = c(0.55, 0.75), legend.background = element_rect(size=0.3, 
+                                           colour ="white"),  legend.direction = "vertical")+
+  theme(legend.title=element_text(size=12, face="bold"), 
+    legend.text=element_text(size=12), axis.ticks.y = element_blank())+
+  scale_y_continuous(labels = scales::scientific)+
+         theme (legend.box.background = element_rect(colour = "black"))
+  
+  
+
+  
+  
+  Phylum_cyano2abn <-        ggplot(data = uahbs234ab_cyna2BC,
+                            mapping = aes_string(x ="Sample",y="AA_Genus",fill="OTU_Genus"))+
+    geom_bar(stat="identity")+
+    theme(legend.position="right")+
+    #geom_text (size = 4.5, position = position_stack(vjust = 0.5), color="white")+
+     theme(legend.text=element_text(size=24))+
+    ylab("Cyanobacteria (>100 Cells/mL)")+
+    theme(axis.text = element_text(size = 12))+
+    theme(axis.title = element_text(size = 12))+
+    coord_flip()+                   theme_bw()+
+    xlab("Depth (m)")+
+  
+    scale_x_discrete(labels=c("LC-19m-E1"="19m","LC-17m-E1"="17m",
+                              "LC-15point5m-E1"="15.5m", 
+                              "Cadagno15m-E2"="15m", "LC-13m-E1"="13m", "LC-11m-E1"="11m","LC-9m-E1"="9m",
+                              "Cadagno7m-E2"="7m", "LC-5m-E1"="5m", "LC-3m-E1"="3m"), 
+                      limits=c("", "LC-19m-E1","LC-17m-E1"," ","LC-15point5m-E1", "Cadagno15m-E2",
+                              "LC-13m-E1"," ", "LC-11m-E1", "LC-9m-E1", "Cadagno7m-E2",
+                              "LC-5m-E1", "LC-3m-E1", "")) +  
+  scale_fill_manual(values = c("darkseagreen3", "darkseagreen4", "darkseagreen2"))+
+
+    theme(legend.position = "left")+
+      theme(axis.text = element_text(size = 12))+
+    theme(axis.title = element_text(size = 12),  legend.box.background = element_rect(color="black", size=01), panel.border = element_rect(colour = "black", fill=NA, size=2))+
+     guides(fill=guide_legend(ncol=1, title="Cyanobacteria OTU"))+
+    ggtitle("B. Only Cyanobacteria Without Chloroplast and Oxyphotobacteria (OTUs)")+
+       theme(legend.position="right")+
+   theme(axis.text=element_text(size=24),
+          axis.title=element_text(size=24,face="bold"))+
+       xlab("")+
+    theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line
+  )+
+  theme(axis.title.y = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank())
+
+  
+    yv1abz_Phylum_cyano2abn<- Phylum_cyano2abn + 
+      annotate(geom="text", x=8, y=250, label="Chemocline",
+              color="black", size=5.5)+
+      annotate(geom="text", x=14, y=250, label="Mixolimnion",
+              color="black", size=5.5) + 
+      annotate(geom="text", x=4, y=250, label="Monimolimnion",
+              color="black", size=5.5)+
+   theme(axis.title.y = element_blank())+
+   # theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())+
+      guides(fill = guide_legend(ncol= 1,  byrow = TRUE))+
+  theme(legend.title=element_text(size=24), 
+    legend.text=element_text(size=22)) +
+ theme(legend.position = c(0.65, 0.75), legend.background = element_rect(size=0.3, 
+                                          colour ="black"),  legend.direction = "horizontal")+
+      scale_y_continuous(labels = scales::scientific)+
+           guides(fill=guide_legend(ncol=1, title="B. Cyanobacteria Genus"))+ theme(axis.text=element_text(size=14),
+          axis.title=element_text(size=14,face="bold"), legend.text = element_text(size=12))+
+          theme(plot.title = element_text(size = 16, face = "bold"))+
+      theme(legend.title=element_text(size=12, face="bold"), 
+    legend.text=element_text(size=12), axis.ticks.y = element_blank())
+
+      
+    
+    fig.S3<- yv1a_CC_Cyano | yv1abz_Phylum_cyano2abn
+    
+    
+    
+    #Figure 4 (E)   Phylogenetic Tree Annotation
+     Meta_Sheet1 <- read.csv("C:/Users/sooch/Desktop/Tree_LC/Tree2/rxaml_2_anc_tree - Sheet1.csv")
+     Meta_Sheet2 <- read.csv("C:/Users/sooch/Desktop/metafile.csv")
+     meta_sheet12<- merge(Meta_Sheet2, Meta_Sheet1, by="Accession_ID", all.x = F)
+
+   Accession_ID<- c("AB294340.1.1396","AB930535.1.1412", "AY948033.1.1412","AY948048.1.1412",  "DQ422812.109483.110989", "DQ422812.150364.151870", "EF520516.1.1247", "EU580489.1.1445",
+"FJ381978.1.1348" , "FJ381993.1.1344",  "FJ612150.1.1429",  "FJ612356.1.1446",
+"FJ612436.1.1451",  "FJ968741.89400.90990" ,  "GU936924.1.1458", "JF272031.1.1446",
+"JF495289.1.1445",  "JF917234.1.1452",  "JN626489.1.1342",  "JX221840.1.1399",
+"KJ201907.99785.101255",  "KT199255.49748.51262", "LC016779.1.1996",  "LC153790.1.2050",
+"Y17632.1.2184","CP003940.1433867.1435344", "CP003940.1167849.1169324",   "Otu00006", "Otu00008" ,"Otu00033", "Otu00042", "Otu00051", "Otu00052", "Otu00055", "Otu00106", "Otu00143",  "Otu00208", "Otu00286", "Otu00323" , "Otu00342", "Otu00475")
+   
+   OTU<- c("Otu00006", "Otu00008" ,"Otu00033", "Otu00042", "Otu00051", "Otu00052", "Otu00055", "Otu00106", "Otu00143",  "Otu00208", "Otu00286", "Otu00323" , "Otu00342", "Otu00475")
+ OTUdf<- data.frame(OTU)
+   
+   OtudfT <- data.frame(Accession_ID)
+   withotudf<- merge(meta_sheet12, OtudfT, by= "Accession_ID", all=T)
+   
+     OTU_ID_cya<- uahbs234ab_cyna_CPF %>%                           #Cyanobacteria AA 16s
+     dplyr::  select("Sample", "OTU", "AA_Genus", "Genus")
+   
+    withotudf2<- merge(withotudf, OTU_ID_cya, by.x= "Accession_ID",by.y="OTU",all=T)
+    
+    withotudf3 = dplyr::mutate(withotudf2, newlab = paste(Accession_ID, Microbe, sep='| '))
+    withotudf4 = dplyr::mutate(withotudf3, newlab2 = paste(newlab, Source, sep=', '))
+
+withotudf4[] <- lapply(withotudf4, sub, pattern = "\\| NA.*", replacement = "")
+        withotudf4<- withotudf4[,-c(2:4, 11:13, 20,21,23,25, 26,32,35, 37,38,43)]
+withotudf56 <- withotudf4[-c(5,7,9,11), ]
+
+ treenex1_O<- read.tree("C:/Users/sooch/Desktop/RAxML_bipartitions.T23")
+ treenex1_O$tip.label<- gsub(".*Otu","Otu", treenex1_O$tip.label)
+treenex1_O$tip.label<- gsub("\\_.*","",treenex1_O$tip.label)
+
+
+ treem2 <- ggtree(treenex1_O, size=1, linetype="solid") +
+   geom_text2(aes(label=node))+
+ 
+           geom_text2(aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 80), color="black") 
+
+    
+    lbc5A <- groupClade(treenex1_O, c(47,56,60,62,44))
+
+
+lbc6A<- ggtree(lbc5A, aes(color=group), size=3)+ 
+       scale_color_manual(values=c("black", "darkred", "darkblue", "goldenrod3",  "mediumaquamarine", "saddlebrown"))+
+       #geom_text2(aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 80), color="black")+
+  geom_label2 (aes(label=label, subset = !is.na(as.numeric(label)) & as.numeric(label) > 80), color="black", size=8, hjust=.5)
+#+geom_text(aes(label=node))
+
+
+lbc7A<- lbc6A %<+% withotudf56
+
+
+
+lbc8A <- lbc7A+   
+  geom_treescale(linesize=4, fontsize = 9)+
+  geom_tiplab(aes(label=newlab2), size=9) +
+  geom_tippoint(aes(shape=Genus), size=9)+
+    scale_shape_manual( "SILVA Genus", values=c(19,18,15,17,8), labels = c("Chloroplast", "Cyanobium_PCC-6307", "Gastranaerophilales","Oxyphotobacteria_unclassified", "Pseudanabaena_PCC-7429", ""))+
+
+   guides(color = FALSE, fill= FALSE)+
+  theme(legend.background = element_rect(size=2, linetype="solid"))+
+  theme(legend.text=element_text(size=21), legend.title=element_text(size=22, face="bold"), legend.position = c(0.85, 0.90), legend.background = element_rect(size=0.3, 
+                                           colour ="black"),  legend.direction = "vertical")+
+   ggtitle("Phylogram with manual bootstrapping (Values <80)")+
+    theme(plot.title = element_text(hjust = 0.5, size=22, face = "bold"))+
+  theme(plot.margin = unit(c(0, 0, 0, 0), "cm"))+
+  xlim(0,1)+
+
+  geom_cladelabel(node=47, label="Uncultured Chloroplast", color="darkred", offset=0.2,
+                           align=T, angle=270, hjust='center', barsize = 3,
+  fontsize = 10.5)+
+
+
+   geom_cladelabel(node=56, color="darkblue", label="Eukaryota; Sar; Stramenopiles; Ochrophyta",
+                  offset=.3, align=T, hjust='center', angle=270, barsize = 3,
+  fontsize = 10.5 )+
+
+   geom_cladelabel(node=60, label="Eukaryota; Haptista; Haptophyta", color="goldenrod3", 
+                    offset=.2, align=T, angle=270, hjust='center', barsize = 3,
+  fontsize = 10.5 )+
+   geom_cladelabel(node=62, label="Cyanobacteria", color= "mediumaquamarine", 
+                        offset=.35, align=T, angle=270, hjust='center', barsize = 3,
+  fontsize = 10.5 )+
+
+
+   geom_cladelabel(node=74, label="Eukaryota; Viridiplantae; Chlorophyta", color= "black", 
+                        offset=.2, align=T, angle=270, hjust='center', barsize = 3,
+  fontsize = 10.5 )+
+ geom_cladelabel(node=44, label="Eukaryota; Viridiplantae; Streptophyta", color="saddlebrown", 
+                      offset=.3, align=T, angle=270, hjust='center', barsize = 3,
+  fontsize = 10.5 )
+
+
+Figure4<- ggarrange(p_c, yv1abz_Phylum_cyano2abn_CC, newOTU1BN, newOTU2, ncol=4, widths = c(0.6,1,0.8,0.8), align = "h")
+ 
+ Figure4 / plot_spacer()/ lbc8A + plot_layout(heights = c(1,0.05, 1.75))
+    
+
+```
+```{r fig.S4,Fig S.5, echo=TRUE}
+
+
+
+
+oxygen_pcoa<- ggplot(Meta_data_PLP_VLP_II, aes(CTD_28_29_Oxygen, Axis.1_16s_b) ) +
+  geom_point() +
+  stat_smooth(color = "black", size=0.3) +
+  stat_cor(method = "pearson", label.y = 0.5, label.x = 1)+ theme_bw()+
+     labs(title = "A. Oxygen vs 16s rRNA Bray-Curtis Dissimilarity", subtitle = "Local Polynomial Regression, Method=LOESS")+
+    xlab("Day 1 and Day 2 Oxygen (mg/L)")+
+        ylab("PCoA Axis.1 Variation (16s rRNA)")+
+   # theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+  
+  geom_point(aes(color=as.factor(depth_m)), size=4)+
+     scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink4", "deeppink1", "#CC79A7", "peachpuff2", "peachpuff4"))
+
+
+     light_pcoa<- ggplot(Meta_data_PLP_VLP_II, aes(CTD2_PAR_29, Axis.1_16s_b)) +
+   geom_point() +
+  stat_smooth(color = "black", size=0.3) +
+  stat_cor(method = "pearson", label.y = 0.5, label.x = 3)+ theme_bw() +
+        labs(title = "B. Light vs 16s rRNA Bray-Curtis Dissimilarity", subtitle = "Local Polynomial Regression, Method=LOESS")+
+    xlab("Day 2 PAR (w/m^2)")+
+        ylab("PCoA Axis.1 Variation (16s rRNA)")+
+      # theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+     #
+geom_point(aes(color=as.factor(depth_m)), size=4)+
+     scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink4", "deeppink1", "#CC79A7", "peachpuff2", "peachpuff4"))
+
+    
+  
+  
+       oxygen_pcoa2bv<- ggplot(Meta_data_PLP_VLP_II, aes(CTD_28_29_Oxygen, PCoA_Cells_SYBR_Axis1) ) +
+  geom_point() +
+  stat_smooth(color = "black", size=0.3) +
+  stat_cor(method = "pearson", label.y = 0.5, label.x = 1)+ theme_bw()+
+     labs(title = "C. Oxygen vs Flow Cytometry NMDS Variations", subtitle = "Local Polynomial Regression, Method=LOESS")+
+    xlab("Day 1 and Day 2 Oxygen (mg/l)")+
+        ylab("NMDS Axis.1 Variation (Flow-Cytometry)")+
+    #theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+  
+  geom_point(aes(color=as.factor(depth_m)), size=4)+
+     scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink4", "deeppink1", "#CC79A7", "peachpuff2", "peachpuff4"))
+       
+       
+        
+light_pcoa2<- ggplot(Meta_data_PLP_VLP_II, aes(CTD2_PAR_29, PCoA_Cells_SYBR_Axis1)) +
+   geom_point() +
+  stat_smooth(color = "black", size=0.3) +
+  stat_cor(method = "pearson", label.y = 0.5, label.x = 3)+ theme_bw() +
+        labs(title = "D. Light vs Phenotypic Bacterial Diversity", subtitle = "Local Polynomial Regression, Method=LOESS")+
+    xlab("Day 2 PAR (w/m^2)")+
+        ylab("NMDS Axis.1 Variation (Flow-Cytometry)")+
+      # theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+     #
+geom_point(aes(color=as.factor(depth_m)), size=4)+
+     scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink4", "deeppink1", "#CC79A7", "peachpuff2", "peachpuff4"))
+          
+       
+       
+       
+       
+
+     geno_p<- ggplot(Meta_data_PLP_VLP_II, aes(x=Meta_data_PLP_VLP_II$PCoA_Cells_SYBR_Axis1, y=Meta_data_PLP_VLP_II$Axis.1_16s_b)) +
+   geom_point() +
+  stat_smooth(color = "black", size=0.3, method = 'lm') +
+  stat_cor(method = "pearson", label.y = -0.4, label.x = -0.2)+ theme_bw() +
+       labs(title = "E. Phenotypic vs Genotypic Beta Diversity", subtitle = "Linear Regression, Method=lm")+
+       xlab("PCoA Axis.1 Variation (16s rRNA)")+
+        ylab("PCoA Axis.1 Variation (Flow-cytometry)")+
+                    geom_point(aes(color=as.factor(depth_m)), size=4)+
+       scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink4", "deeppink1", "#CC79A7", "peachpuff2", "peachpuff4"))
+
+
+     geno_p2<- ggplot(Meta_data_PLP_VLP_II, aes(y=C_D1_Alpha_div_Cells, x=Fisher_16s_a)) +
+   geom_point() +
+  stat_smooth(color = "black", size=0.3, method="lm") +
+  stat_cor(method = "pearson", label.y = 10000, label.x = 60)+ theme_bw()+
+        scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink4", "deeppink1", "#CC79A7", "peachpuff2", "peachpuff4"))+
+             geom_point(aes(color=as.factor(depth_m)), size=4)+
+       labs(title = "F. Phenotypic vs Genotypic Alpha Diversity", subtitle = "Linear Regression, Method=lm")+
+       xlab("Fisher Diversity (16s rRNA)")+
+        ylab("Phenotypic Diversity, D1 (Flow-cytometry)")
+       
+        
+      Fig.S4<-     ggarrange(oxygen_pcoa, light_pcoa, oxygen_pcoa2bv, light_pcoa2, geno_p, geno_p2, nrow = 3, ncol = 2, common.legend = T, legend= "bottom")
+      
+ 
+      
+      grand_phen_g_CTD_lm <- Meta_data_PLP_VLP_II[names(Meta_data_PLP_VLP_II) %in% c("A.Bacteroidetes.Lentimicrobiaceae_ge", "Bacterial_production", "A.Bacteroidetes.Chlorobium", "A.Firmicutes.Erysipelotrichaceae_unclassified", "A.ProteoB.Chromatium", "A.CyanoB.Chloroplast_ge", "depth_m")]
+      
+      
+
+  grand_phen_g_CTD_lm2 <- Meta_data_PLP_VLP_II[names(Meta_data_PLP_VLP_II) %in% c("A.Bacteroidetes.Lentimicrobiaceae_ge", "CTD_28_29_Turb", "A.Bacteroidetes.Chlorobium", "A.Firmicutes.Erysipelotrichaceae_unclassified", "A.ProteoB.Chromatium", "A.CyanoB.Chloroplast_ge",  "depth_m")]
+ 
+  
+    Lentilm_L<- ggplot(grand_phen_g_CTD_lm, aes(x=grand_phen_g_CTD_lm$A.Bacteroidetes.Lentimicrobiaceae_ge, y=grand_phen_g_CTD_lm$Bacterial_production)) +
+    geom_point() +
+  stat_smooth(method = "lm", color = "black", size=0.3)+
+    
+  stat_cor(method = "pearson", label.y = 2.5e-06, label.x = 2)+ theme_bw()+
+    xlab("Abundance of Lentimicrobium (%)")+
+    ylab("Bacterial Production (ngC L-1 H-1)")+
+     geom_point(aes(color=as.factor(depth_m)), size=4)+
+     scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink3", "deeppink4", "peachpuff2", "peachpuff4"))+
+    #    ylim(0, 2.5e-06)+
+              theme(axis.title.x = element_blank())+
+    theme(axis.text.x = element_blank())+
+    theme(axis.ticks.x = element_blank())
+    
+     LentiT_L<- ggplot(grand_phen_g_CTD_lm2, aes(x=grand_phen_g_CTD_lm2$`A.Bacteroidetes.Lentimicrobiaceae_ge`, y=grand_phen_g_CTD_lm2$CTD_28_29_Turb)) +
+    geom_point() +
+  stat_smooth(method = "lm", color = "black", size=0.3)+ 
+  stat_cor(method = "pearson", label.y = 12, label.x = 1)+ theme_bw()+
+    xlab("Abundance of Lentimicrobium (%)")+
+    ylab("Turbidity (FTU)")+
+     geom_point(aes(color=as.factor(depth_m)), size=4)+
+     scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink3", "deeppink4", "peachpuff2", "peachpuff4"))
+    
+    
+    
+     Lentilm_E<- ggplot(grand_phen_g_CTD_lm, aes(x=grand_phen_g_CTD_lm$`A.Firmicutes.Erysipelotrichaceae_unclassified`, y=grand_phen_g_CTD_lm$Bacterial_production)) +
+    geom_point() +
+  stat_smooth(method = "lm", color = "black", size=0.3)+ 
+  stat_cor(method = "pearson", label.y = 2.5e-06, label.x = 1)+ theme_bw()+
+    xlab("Abundance of Unclassified Erysipelotrichaceae (%)")+
+    ylab("Bacterial Production")+
+     geom_point(aes(color=as.factor(depth_m)), size=4)+
+     scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink3", "deeppink4", "peachpuff2", "peachpuff4"))+
+           theme(axis.title.y = element_blank())+
+    theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())+
+         ylim(0, 2.5e-06)+
+               theme(axis.title.x = element_blank())+
+    theme(axis.text.x = element_blank())+
+    theme(axis.ticks.x = element_blank())
+     
+     
+      Lentilm_CL<- ggplot(grand_phen_g_CTD_lm, aes(x=grand_phen_g_CTD_lm$`A.Bacteroidetes.Chlorobium`, y=grand_phen_g_CTD_lm$Bacterial_production)) +
+    geom_point() +
+  stat_smooth(method = "lm", color = "black", size=0.3)+ 
+  stat_cor(method = "pearson", label.y = 2.5e-06, label.x = 1)+ theme_bw()+
+    xlab("Abundance of Chlorobium (%)")+
+    ylab("Bacterial Production")+
+     geom_point(aes(color=as.factor(depth_m)), size=4)+
+     scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink3", "deeppink4", "peachpuff2", "peachpuff4"))+
+                theme(axis.title.y = element_blank())+
+    theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())+
+              ylim(0, 2.5e-06)+
+             theme(axis.title.x = element_blank())+
+    theme(axis.text.x = element_blank())+
+    theme(axis.ticks.x = element_blank())
+      
+      LentiT_E<- ggplot(grand_phen_g_CTD_lm2, aes(x=grand_phen_g_CTD_lm2$`A.Firmicutes.Erysipelotrichaceae_unclassified`, y=grand_phen_g_CTD_lm2$CTD_28_29_Turb)) +
+    geom_point() +
+  stat_smooth(method = "lm", color = "black", size=0.3)+ 
+  stat_cor(method = "pearson", label.y = 12, label.x = 1)+ theme_bw()+
+    xlab("Abundance of Unclassifed Erysipelotrichacea (%)")+
+    ylab("Turbidity (FTU)")+
+     geom_point(aes(color=as.factor(depth_m)), size=4)+
+     scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink3", "deeppink4", "peachpuff2", "peachpuff4"))+
+                theme(axis.title.y = element_blank())+
+    theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())
+      
+     
+       LentiT_CL<- ggplot(grand_phen_g_CTD_lm2, aes(x=grand_phen_g_CTD_lm2$`A.Bacteroidetes.Chlorobium`, y=grand_phen_g_CTD_lm2$CTD_28_29_Turb)) +
+    geom_point() +
+  stat_smooth(method = "lm", color = "black", size=0.3)+ 
+  stat_cor(method = "pearson", label.y = 12, label.x = 1)+ theme_bw()+
+    xlab("Abundance of Chlorobium (%)")+
+    ylab("Turbidity (FTU)")+
+     geom_point(aes(color=as.factor(depth_m)), size=4)+
+     scale_color_manual("Depth (m)", values=c("#52854C", "#C3D7A4","darkseagreen","forestgreen", "darkolivegreen3", "mediumorchid1", "deeppink3", "deeppink4", "peachpuff2", "peachpuff4"))+
+                theme(axis.title.y = element_blank())+
+    theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())
+       
+      
+       
+   #       Fig.S5<-     ggarrange(Lentilm_L, Lentilm_E, Lentilm_CL, LentiT_L, LentiT_E, LentiT_CL, nrow = 3, ncol = 2, common.legend = T, legend= "bottom")
+       
+       
+       
+        Fig.S5<-     (Lentilm_L |  Lentilm_E| Lentilm_CL)/ (LentiT_L| LentiT_E| LentiT_CL)   + plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = 'A',  tag_prefix = '(',
+                         tag_suffix = ')') & 
+  theme(plot.tag = element_text(size = 12, face = "bold")) #1225 x900
+
+
+```
+

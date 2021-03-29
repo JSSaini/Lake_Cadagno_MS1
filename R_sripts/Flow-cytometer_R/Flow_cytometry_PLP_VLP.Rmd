@@ -1,0 +1,480 @@
+---
+title: "Flow_cytometry_Phenotypic_diversity"
+output: html_document
+---
+
+```{r phenoflow-cells}
+
+library("devtools")
+#install_github("CMET-UGent/Phenoflow_package")
+library("Phenoflow") # for fingerprinting
+library("flowViz") # for plotting
+library("ggplot2") # for plotting
+library("flowAI")
+
+require('flowFDA')
+require("vegan")
+require("MESS")
+
+#source("MRM.parameters.R")
+
+
+
+  ##################Flow-alpha##################
+  
+ path = "C:/Users/sooch/Downloads/SYBR_files/"
+  flowData <- read.flowSet(path = path, pattern=".fcs")
+  attributes(flowData)
+  
+  # Select phenotypic features of interest and transform parameters
+  flowData_transformed <- transform(flowData,`FL1-H`=asinh(`FL1-H`), 
+                                   `SSC-H`=asinh(`SSC-H`), 
+                                   `FL3-H`=asinh(`FL3-H`), 
+                                   `FSC-H`=asinh(`FSC-H`))
+param=c("FL1-H", "FL3-H","SSC-H","FSC-H")
+flowData_transformed = flowData_transformed[,param]
+
+
+
+
+
+  ### Create a PolygonGate for denoising the dataset
+  ### Define coordinates for gate in sqrcut1 in format: c(x,x,x,x,y,y,y,y)
+  sqrcut1 <- matrix(c(7,15,15,7,6,6,17,10),ncol=2, nrow=4)
+colnames(sqrcut1) <- c("FL1-H","FL3-H")
+polyGate1 <- polygonGate(.gate=sqrcut1, filterId = "Total Cells")
+
+###  Gating quality check
+gate125<- xyplot(`FL3-H` ~ `FL1-H`, data=flowData_transformed[1], filter=polyGate1,
+       scales=list(y=list(limits=c(5,17)),
+                   x=list(limits=c(5,17))),
+       axis = axis.default, nbin=125, main= "A. Gating for Bacterial Communities", 
+       par.strip.text=list(col="white", font=2, cex=2), smooth=FALSE)
+ggarrange(gate125, gate123, ncol=2)
+
+
+flowData_transformed <- Subset(flowData_transformed, polyGate1)
+
+
+  
+  ### Extract metadata from sample names
+metadata2 <- data.frame(do.call(rbind, lapply(strsplit(flowCore::sampleNames(flowData),"_"), rbind)))
+
+  colnames(metadata2)<- c("Sample_name")
+metadata2$Sample_name<-str_replace_all(metadata2$Sample_name, c(" " = "." , "," = "" ))
+
+  
+  Flow_cytometry_names_files <- read.csv("C:/Users/sooch/Downloads/SYBR_files/Flow_cytometry_names_files.csv")
+  data.frame(Flow_cytometry_names_files)
+  
+
+  Flow_123<- merge(metadata2, Flow_cytometry_names_files, by="Sample_name")
+  as.numeric(Flow_123$Depth)
+  as.data.table(Flow_123)
+  Flow_123$new_layer <- cut(Flow_123$Depth, c(-Inf,4,8,12,15.5,Inf), c("UM","MM", "LM", "CH", "Mo"))
+
+  
+
+
+  
+
+summary <- fsApply(x=flowData_transformed,FUN=function(x) apply(x,2,max),use.exprs=TRUE)
+max = mean(summary[,1])
+mytrans <- function(x) x/max
+flowData_transformed <- transform(flowData_transformed,`FL1-H`=mytrans(`FL1-H`),
+                                  `FL3-H`=mytrans(`FL3-H`), 
+                                  `SSC-H`=mytrans(`SSC-H`),
+                                  `FSC-H`=mytrans(`FSC-H`))
+### Calculate fingerprint with bw = 0.01
+fbasis32 <- flowBasis(flowData_transformed, param, nbin=128, 
+                   bw=0.01,normalize=function(x) x)
+
+
+### Calculate ecological parameters from normalized fingerprint 
+### Densities will be normalized to the interval [0,1]
+### n = number of replicates
+### d = rounding factor
+Diversity.fbasis <- Diversity(fbasis32,d=3, plot=F)
+Evenness.fbasis <- Evenness(fbasis32,d=3, plot=FALSE)
+Structural.organization.fbasis <- So(fbasis32,d=3, plot=FALSE)
+Coef.var.fbasis <- CV(fbasis32,d=3, plot=FALSE)
+
+ results.metrics_cells<- cbind(Diversity.fbasis, Evenness.fbasis,
+                                          Structural.organization.fbasis,
+                 Coef.var.fbasis)
+    results.metrics_cells$Sample.name <- str_replace_all(results.metrics_cells$Sample_name, " ", ".")
+
+ 
+ 
+    #write.csv(results.metrics_cells, "C:/Users/sooch/Documents/results.metrics_cells.csv")
+
+
+
+    
+
+# Diversity.fbasis32 <- Diversity(fbasis32,d=3,plot=TRUE, R=999)
+ Diversity.fbasis32A<- as.data.frame(Diversity.fbasis)
+beta.divt56sush32 <- beta_div_fcm(fbasis32, ord.type="PCoA")
+
+
+ beta.divt56aPABC<- as.data.frame(beta.divt56sush32$points)
+    setDT(beta.divt56aPABC, keep.rownames = TRUE)[]
+
+    colnames(beta.divt56aPABC)[1] <- "Sample_name" 
+    colnames(beta.divt56aPABC)[2] <- "PCoA_Cells_SYBR_Axis1" 
+    colnames(beta.divt56aPABC)[3] <- "PCoA_Cells_SYBR_Axis2" 
+    
+    
+    beta.divt56aPABC$Sample.name <- str_replace_all(beta.divt56aPABC$Sample_name, " ", ".")
+
+final_DT2ABC_P<- merge(Flow_123, results.metrics_cells, by.x= "Sample_name", by.y = "Sample.name")
+
+final_DT2ABC<- merge(final_DT2ABC_P, beta.divt56aPABC, by.x= "Sample_name", by.y = "Sample.name", sort = TRUE)
+
+
+
+#final_DT2AABC<- merge(final_DT2ABC, Diversity.fbasis32A, by.x= "Sample_name",by.y="Sample_name", sort = TRUE)
+ # final_DT2AABC$new_layer <- cut(final_DT2AABC$Depth, c(-Inf,4,8,12,15.5,Inf), c("UM","MM", "LM", "CH", "Mo"))
+
+
+setnames(final_DT2ABC, "D0", "C_D0_Alpha_div_Cells")
+setnames(final_DT2ABC, "D1", "C_D1_Alpha_div_Cells")
+setnames(final_DT2ABC, "D2", "C_D2_Alpha_div_Cells")
+setnames(final_DT2ABC, "sd.D1", "sd.D1_cells")
+setnames(final_DT2ABC, "sd.D2", "sd.D2_cells")
+setnames(final_DT2ABC, "Evenness", "Evenness_cells")
+setnames(final_DT2ABC, "Organisation", "Organisation_cells")
+setnames(final_DT2ABC, "CV", "CV_cells")
+
+
+
+
+final_DT2AABC <- final_DT2ABC [ ,-c(3,4,6)]
+         
+#write.csv(final_DT2AABC, "C:/Users/sooch/Documents/Flow_cells_file.csv")
+
+
+    final_DT2AABC$var.D1_cells <- (final_DT2AABC$sd.D1_cells*final_DT2AABC$sd.D1_cells)
+    
+     final_vlp_DT2AABCFFF<- final_DT2AABC %>% 
+    group_by(Depth) %>% 
+     dplyr:: summarise_all(list(mean))
+
+     final_vlp_DT2AABCFFF2 <- final_vlp_DT2AABCFFF [,-c(2,3,12)]
+     final_vlp_DT2AABCFFF2$sd_d1_avg <- sqrt(final_vlp_DT2AABCFFF2$var.D1_cells)
+     
+     
+     
+     
+      final_vlp_DT2AABCFFF2$new_layer <- cut(final_vlp_DT2AABCFFF2$Depth, c(-Inf,7,12,13.5,15,16.5, Inf), c("UM", "LM", "UCH", "CH","LCH" ,"Mo"))
+      
+      
+       p1p2 <- ggplot(data = final_vlp_DT2AABCFFF2, aes(x = Depth, y = C_D1_Alpha_div_Cells))+
+  geom_point(size = 3.5)+
+  geom_path(size=2)+
+      ylab("Phenotypic Alpha Diversity (D1)")+
+  theme_bw()+
+    coord_flip()+
+      scale_x_reverse(limits = c(21,1), breaks=c(19,18, 17, 16, 15.5, 15,14,13.5,13,12,11,10,9,8,7,6,5,4,3,2,1))+
+      xlab("Depth (m)")+     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+          scale_color_manual("depth (m)", values=c("1"= "#52854C", "2"= "#52854C", "3" = "#52854C", "4"= "#52854C", "5"="#52854C", "6"="#52854C", "7"="darkolivegreen3", "8"="darkolivegreen3", "9"="darkolivegreen3", "10"="darkolivegreen3", "11"="darkolivegreen3", "12"="darkolivegreen3", "13"="mediumorchid1", "13.5"="mediumorchid4", "14"="deeppink3", "15"="deeppink4", "15.5"="deeppink2", "16"="peachpuff2", "17"="peachpuff2", "18"="peachpuff2", "19"="peachpuff2"))+
+         
+      labs(size = "Depth (m)")+
+       theme(axis.text=element_text(size=24),
+          axis.title=element_text(size=24,face="bold"))+
+      labs(title =  "Bacterial Phenotypic Alpha Diversity")+
+      geom_errorbar(aes(ymin=C_D1_Alpha_div_Cells-sd_d1_avg, ymax=C_D1_Alpha_div_Cells+sd_d1_avg), width=0.2, color="black") +
+       theme(legend.position = c(0.65, 0.85), legend.background = element_rect(size=0.3, 
+                                           colour ="black"),  legend.direction = "horizontal")+
+        theme(panel.border = element_rect(colour = "black", fill=NA, size=2))+
+        theme(plot.title = element_text(size = 26, face = "bold"), plot.subtitle=element_text(size=24))+
+        theme(legend.title=element_text(size=24, face = "bold"), legend.text=element_text(size=24))+
+                         scale_y_continuous(labels = scales::scientific)+
+       geom_line(size=2)+
+       guides(color = guide_legend(ncol=3))+
+       annotate("rect", ymin=-Inf, ymax=Inf, xmin=-Inf, xmax=12.5, alpha=0.1, fill="green4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=12.5, xmax=13.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=13.5, xmax=15.5, alpha=0.5, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=15.5, xmax=16.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=16.5, xmax=Inf, alpha=0.2, fill="pink4")+
+    theme(legend.position = "none")
+     
+       p1p2 
+       
+            final_DT2AABC$new_layer <- cut(final_DT2AABC$Depth, c(-Inf,7,12,13.5,15,16.5, Inf), c("UM", "LM", "UCH", "CH","LCH" ,"Mo"))
+
+ 
+    plot_chemoaAXXX2<- plot_beta_fcm(beta.divt56sush32, color = as.factor(final_DT2AABC$new_layer)) + 
+  theme_bw() +
+  geom_point(size = 8)+
+    
+       scale_color_manual("Depth (m)", labels=c("UM"="High O2 (Upper-Mixolimnion 0-7m)","LM"="Mid O2 (Lower-Mixolimnion 8-12m)","UCH"="Upper-Chemocline (13-13.5m)", "CH"="Chemocline (14-15m)","LCH"="Lower-Chemocline(15.5-16.5m)", "Mo"="Monimolimnion (17-19m)"),    values=c("UM"="#C3D7A4", "LM"="#52854C", "UCH"="#efcee2", "CH"="#b58ca5", "LCH"="#8c677d", "Mo"="#d1baba"))+
+
+                theme(axis.text=element_text(size=24),
+          axis.title=element_text(size=24,face="bold"))+
+
+       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+      theme(legend.position = "left")+
+      theme(legend.position = c(0.35, 0.85), legend.background = element_rect(size=0.3, 
+                                           colour ="black"),  legend.direction = "horizontal")+
+            theme(panel.border = element_rect(colour = "black", fill=NA, size=2))+
+        theme(plot.title = element_text(size = 26, face = "bold"), plot.subtitle=element_text(size=24))+
+        theme(legend.title=element_text(size=24, face = "bold"), legend.text=element_text(size=24))+
+      theme(legend.background = element_blank(),
+         legend.box.background = element_rect(size = 1))+
+       labs(title =  "Phenotypic Beta Diversity of Bacterial Communities")+
+      theme(legend.position = "bottom")+
+              guides(color = guide_legend(ncol=1))+
+      theme( legend.key.size = unit(1, "cm")) 
+       
+   plot_chemoaAXXX2  
+
+```
+
+```{R VLPas}
+library("devtools")
+#install_github("CMET-UGent/Phenoflow_package")
+
+library("Phenoflow") # for fingerprinting
+library("flowViz") # for plotting
+library("ggplot2") # for plotting
+library("flowAI")
+
+
+
+
+  ##################Flow-alpha##################
+  
+ path = "C:/Users/sooch/Box/Cadagno2017August/Cadagno2017August/betadiversity_flow/"
+  flowData <- read.flowSet(path = path, pattern=".fcs")
+  attributes(flowData)
+  # Select phenotypic features of interest and transform parameters
+  flowData_transformed <- transform(flowData,`FL1-H`=asinh(`FL1-H`),
+                                    `SSC-H`=asinh(`SSC-H`),
+                                    `FL3-H`=asinh(`FL3-H`),
+                                    `FSC-H`=asinh(`FSC-H`)
+  )
+  param=c("FL1-H", "FL3-H","SSC-H","FSC-H")
+  ### Create a PolygonGate for denoising the dataset
+  ### Define coordinates for gate in sqrcut1 in format: c(x,x,x,x,y,y,y,y)
+  sqrcut1 <- matrix(c(1.6,1.6,6,3.6,1,6.5,6.7,1),ncol=2, nrow=4)
+  colnames(sqrcut1) <- c("FL1-H", "FSC-H")
+  polyGate1 <- polygonGate(.gate=sqrcut1, filterId = "VLPs")
+  
+  ###  Gating quality check
+  gate123<-      xyplot(`FL1-H` ~ `FSC-H`, data=flowData_transformed[1], filter=polyGate1,
+                        scales=list(x=list(limits=c(1,8)),
+                                    y=list(limits=c(1,8))),
+                        axis = axis.default, nbin=125, main="B. Gating for Viral communities",
+                        par.strip.text=list(col="white", font=2, cex=2), smooth=FALSE)
+  gate123
+  
+  ### Isolate only the cellular information based on the polyGate1
+  flowData_transformed <- Subset(flowData_transformed, polyGate1)  
+  
+  ### Extract metadata from sample names
+  metadata <- data.frame(do.call(rbind, lapply(strsplit(flowCore::sampleNames(flowData),"_"), rbind)))
+  View(metadata)
+  
+  colnames(metadata)<- c("Sample_name")
+  
+  Flow.Cytometry <- read.csv("C:/Users/sooch/Box/Cadagno2017August/Cadagno2017August/Flow Cytometry.csv")
+  data.frame(Flow.Cytometry)
+  
+  
+  colnames(Flow.Cytometry) <- c("Sample_name", "Description", "Duration", "Rate", "Volume", "Dilution", "VLP", "VLP_mL", "Depth_m", "Filter_frac")
+  data.table(Flow.Cytometry)
+  
+  
+  
+  Flow_VLP<- merge(metadata, Flow.Cytometry, by="Sample_name")
+  
+  summary <- fsApply(x = flowData_transformed, FUN = function(x) apply(x, 2, max), use.exprs = TRUE)
+  maxval <- max(summary[,"FL1-H"]) #Replace with the column representing the green fluorescence channel (e.g. "FITC-H")
+  mytrans <- function(x) x/maxval
+  flowData_transformed <- transform(flowData_transformed,`FL1-H`=mytrans(`FL1-H`),
+                                    `FL3-H`=mytrans(`FL3-H`),
+                                    `SSC-H`=mytrans(`SSC-H`),
+                                    `FSC-H`=mytrans(`FSC-H`))
+  flowData_transformed
+  
+  ### Randomly resample to the lowest sample size
+  ###   flowData_transformed <- FCS_resample(flowData_transformed, replace=TRUE)
+  ### Calculate fingerprint with bw = 0.01
+  fbasis56a <- flowBasis(flowData_transformed, param, nbin=128,
+                        bw=0.01,normalize=function(x) x)
+  
+  ### Calculate ecological parameters from normalized fingerprint 
+### Densities will be normalized to the interval [0,1]
+### n = number of replicates
+### d = rounding factor
+Diversity.fbasis <- Diversity(fbasis56a,d=3, plot=T)
+Evenness.fbasis <- Evenness(fbasis56a,d=3, plot=FALSE)
+Structural.organization.fbasis <- So(fbasis56a,d=3,plot=FALSE)
+Coef.var.fbasis <- CV(fbasis56a,d=3,n=3,plot=FALSE)
+
+ results.metrics_VLP<- cbind(Diversity.fbasis, Evenness.fbasis,
+                                          Structural.organization.fbasis,
+                 Coef.var.fbasis)
+ 
+ 
+ final_vlp_DT2<- merge(Flow_VLP, results.metrics_VLP, by= "Sample_name", sort = TRUE)
+
+  
+### Export ecological data to .csv file in the chosen directory
+write.csv2(file="results.metrics_VLP.csv",
+           cbind(Diversity.fbasis, Evenness.fbasis,
+                                          Structural.organization.fbasis,
+                 Coef.var.fbasis))
+
+
+
+  
+  
+  ### Calculate Diversity from normalized fingerprint
+
+    beta.divt56 <- beta_div_fcm(fbasis56a, ord.type="PCoA")
+####Scree Plot
+  scree_vlp<-  plot(beta.divt56$eig, xlab = 'Sample Number', ylab = 'Eigenvalue Size', main = 'Scree Graph') 
+
+
+
+    
+        beta.divt56aP<- as.data.frame(beta.divt56$points)
+        
+        
+    setDT(beta.divt56aP, keep.rownames = TRUE)[]
+
+    colnames(beta.divt56aP)[1] <- "Sample_name" 
+    colnames(beta.divt56aP)[2] <- "PCoA_VLP_Axis1" 
+    colnames(beta.divt56aP)[3] <- "PCoA_VLP_Axis2" 
+    
+            
+
+#final_vlp_DT2<- merge(Flow_VLP, beta.divt56aP, by= "Sample_name", sort = TRUE)
+final_vlp_DT2A<- merge(final_vlp_DT2, beta.divt56aP, by= "Sample_name", sort = TRUE)
+
+  setnames(final_vlp_DT2A,  "D0", "V_alpha_D0") 
+  setnames(final_vlp_DT2A,  "D2", "V_alpha_D2")
+    setnames(final_vlp_DT2A,  "D1", "V_alpha_D1") 
+  setnames(final_vlp_DT2A,  "PCoA_VLP_Axis1", "V_Axis.1_Pcoa") 
+  setnames(final_vlp_DT2A,  "PCoA_VLP_Axis2", "V_Axis.2_Pcoa") 
+  df_vlp <- final_vlp_DT2A[ -c(11,12) ]
+
+  
+      write.csv(df_vlp, "C:/Users/sooch/Documents/VLP_data_raw.csv")
+
+
+
+
+
+
+###Removing duplicated columns with NA
+
+df_vlp$V_a_sdD1_var<- df_vlp$V_a_sdD1*df_vlp$V_a_sdD1
+
+  total_vlp2A<- df_vlp %>% 
+    group_by(Depth_m) %>% 
+     dplyr:: summarise_all(list(mean))
+
+        
+  total_vlp2AB<- total_vlp2A[,-c(2,3,4,11)]
+    total_vlp2ABCD<- total_vlp2AB[-c(5,10),]
+
+  
+  
+  
+  total_vlp2ABCD$Depth_m_15<- c("11", "13", "15.5", "15", "17", "19", "3", "5")
+  
+  total_vlp2ABCDE<- total_vlp2ABCD[,-c(1)]
+   #bigdata_VLP<- merge(total_vlp2ABCDE, bigdata_Cells2FAP, by.x = "Depth_m_15", by.y = "Depth_m", all = F)
+ #bigdata_VLP2<- bigdata_VLP[,-c(2:6)]
+ #Remove SD
+ # bigdata_VLP3<- bigdata_VLP2[,-c(8,10)]
+  
+   setnames(total_vlp2ABCDE,  "D0", "V_alpha_D0") 
+  setnames(total_vlp2ABCDE,  "D2", "V_alpha_D2")
+   setnames(total_vlp2ABCDE,  "D1", "V_alpha_D1") 
+  setnames(total_vlp2ABCDE,  "PCoA_VLP_Axis1", "V_Axis.1_Pcoa") 
+  setnames(total_vlp2ABCDE,  "PCoA_VLP_Axis2", "V_Axis.2_Pcoa")   
+  setnames(total_vlp2ABCDE,  "Depth_m_15", "Depth_m") 
+      write.csv(total_vlp2ABCDE, "C:/Users/sooch/Documents/VLP_with_avg_data.csv")
+      
+      
+       
+    
+
+    plot_chemoaA2<- plot_beta_fcm(beta.divt56, color = as.factor(Flow_VLP$Depth)) + theme_bw()+
+    geom_point(aes(colour = as.factor(Flow_VLP$Depth)),  size=8)+
+   
+     scale_color_manual(values = c("3"="#C3D7A4", "5"="#C3D7A4", "11"="#52854C", "13"="#efcee2", "15mm"="#b58ca5", "15.5"="#8c677d", "17"="#d1baba", "19"="#d1baba", "#d1baba"), name="Depth (m)", labels = c("3"="3", "5"="5", "11"="11", "13"="13", "15mm"="15", "15.5"="15.5", "17"="17", "19"="19"), limits = c("3", "5", "11", "13", "15mm","15.5", "17", "19"))+
+   
+   
+    theme(legend.position = "right", legend.background = element_rect(fill="white", size=0.3, linetype="solid", colour ="white"))+
+   
+    theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold", colour ="black"))+
+     labs(title = "Phenotypic Beta Diversity of Viral Communities")+
+     theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line
+  )+
+    theme(legend.position = c(0.45, 0.90), legend.background = element_rect(size=0.3, 
+                                            colour ="black"),  legend.direction = "horizontal")+
+        guides(fill = guide_legend(ncol=2))+
+         theme(panel.border = element_rect(colour = "black", fill=NA, size=2))+
+         theme(plot.title = element_text(size = 26, face = "bold"), plot.subtitle=element_text(size=24))+
+         theme(legend.title=element_text(size=24, face = "bold"), legend.text=element_text(size=24)) +            
+       theme(legend.background = element_blank(),
+          legend.box.background = element_rect(size = 1))+
+           theme(legend.position = "none")
+
+ 
+    
+     pvlp12 <- ggplot(data = total_vlp2ABCDE, aes(x = as.numeric(total_vlp2ABCDE$Depth_m), y = V_alpha_D1))+ theme_bw()+
+    geom_point(size=3.5, aes(colour = Depth_m))+
+       geom_errorbar(aes(ymin=V_alpha_D1-sqrt(V_a_sdD1_var), ymax=V_alpha_D1+sqrt(V_a_sdD1_var)), width=0.05, color="black")+
+    labs(color = "Depth (m)", y = "Phenotypic diversity (D2)", x = "Depth (m)")+
+    ylab("Phenotypic Alpha Diversity (D1)")+  theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+       scale_x_reverse(limits = c(21,1), breaks=c(19, 17, 15.5, 15, 13, 11,5, 3))+
+   scale_colour_manual(breaks=c("3", "5","11",  "13", "15", "15.5","17", "19"), values=c("black","black",  "black","black","black","black","black", "black"))+
+   theme(legend.position = "none", legend.background = element_rect(fill="white", size=0.3, linetype="solid", colour ="white"))+
+    labs(title =  "Viral Phenotypic Alpha Diversity")+ coord_flip()+ #subtitle = "Flow Data (No Control, SYBR Samples Only)"
+    theme(
+  # Hide panel borders and remove grid lines
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank(),
+  # Change axis line
+  )+
+    geom_segment(aes(x = 3 , y = 5706.598, xend = 5, yend = 5493.193), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 5 , y = 5493.193, xend = 11, yend = 4333.956), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 11 , y = 4333.956, xend = 13, yend = 4488.076), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 13 , y = 4488.076, xend = 15, yend = 4890.036), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 15 , y = 4890.036, xend = 15.5, yend = 4950.136), linetype="solid", color = "black", size=2)+
+    geom_segment(aes(x = 15.5 , y = 4950.136, xend = 17, yend = 5156.050), linetype="solid", color = "black", size=2)+
+     geom_segment(aes(x = 17 , y = 5156.050, xend = 19, yend = 5240.217 ), linetype="solid", color = "black", size=2)+ #arrow = arrow(type = "open", angle = 30, length = unit(0.15, "inches")))+
+     theme(axis.title.y = element_blank())+
+    theme(axis.text.y = element_blank())+
+    theme(axis.ticks.y = element_blank())+
+   theme(legend.position = "right")+
+    theme(legend.position = c(0.35, 0.85), legend.background = element_rect(size=0.3, 
+                                           colour ="black"),  legend.direction = "horizontal")+
+       guides(fill = guide_legend(ncol=2))+
+        theme(panel.border = element_rect(colour = "black", fill=NA, size=2))+
+        theme(plot.title = element_text(size = 26, face = "bold"), plot.subtitle=element_text(size=24))+
+        theme(legend.title=element_text(size=24, face = "bold"), legend.text=element_text(size=24))+
+                         scale_y_continuous(labels = scales::scientific)+
+   theme(axis.text.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank())+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=-Inf, xmax=12.5, alpha=0.1, fill="green4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=12.5, xmax=13.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=13.5, xmax=15.5, alpha=0.5, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=15.5, xmax=16.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=16.5, xmax=Inf, alpha=0.2, fill="pink4")+
+   theme(legend.position = "none")
+     
+    ```
+    
+    
+
+

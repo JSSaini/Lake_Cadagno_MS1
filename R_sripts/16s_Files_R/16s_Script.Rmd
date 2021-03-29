@@ -1,0 +1,370 @@
+---
+title: "16s_Lake_Cadagno"
+output: html_document
+---
+
+```{r Analysis16s}
+  
+  library(knitr)
+  require(knitr)
+  #opts_knit$set(root.dir = "~/Box Sync/files_for_R/")
+  #setwd("~/Desktop/files_for_R/")              
+  
+  setwd("C:/Users/sooch/Box")
+  
+  
+  knitr::opts_chunk$set(eval = TRUE, 
+                        echo = TRUE, 
+                        cache = FALSE,
+                        include = TRUE,
+                        collapse = FALSE,
+                        message=FALSE,
+                        warning=FALSE,
+                        dependson = NULL,
+                        error = TRUE,
+                        fig.align = "center")
+  library(ggplot2) 
+  library(vegan) 
+  library(dplyr) 
+  library(scales) 
+  library(grid) 
+  library(reshape2)
+  library(plyr)
+  library(phyloseq) 
+  library(magrittr)
+  library(geosphere)
+  library(matrixStats)
+  library(data.table)
+  library(DT)
+  library(colorspace)
+  library(corrplot)
+  library(Hmisc)
+  library(tidyverse)
+  library(readxl)
+  library(corrplot)
+  library(ggpubr)
+  library(cowplot)
+  
+  library(ggplot2) 
+  library(vegan) 
+  library(dplyr) 
+  library(scales) 
+  library(grid) 
+  library(reshape2)
+  library(plyr)
+  library(phyloseq) 
+  library(magrittr)
+  library(geosphere)
+  library(matrixStats)
+  library(data.table)
+  library(DT)
+  #library(ggpubr)
+  #library(DESeq2)
+  library(colorspace)
+ # library(remotes)
+  library(ggrepel)
+  #library(ggpubr)
+  library(ape)
+  library(devtools)
+  library(readxl)
+  library(RColorBrewer)
+  
+  
+  
+  
+  
+  
+  
+  
+  # Assign variables for imported data
+  sharedfile="16S_Cadagno_rerun/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.shared"
+  taxfile = "16S_Cadagno_rerun/stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.an.unique_list.0.03.cons.taxonomy"
+  
+  
+  
+  mapfile = read.csv("16S_Cadagno_rerun/16s_LC_meta2.csv")
+  #mapfile$new_layer <- cut(mapfile$depth_m, c(-Inf,7,12,13.5,15,16.5, Inf), c("UM", "LM", "UCH", "CH","LCH" ,"Mo"))
+
+  
+  
+  
+#mapfile<- merge(mapfile0, means_f, by.x="depth_m", by.y ="Label")
+
+  
+
+  # Import mothur data
+  mothur_data <- import_mothur(mothur_shared_file = sharedfile, mothur_constaxonomy_file = taxfile)
+  View (mothur_data)
+  
+  # Import sample metadata
+  #map <- read.table(mapfile)
+  #view(map)
+  
+  rownames(mapfile) <- mapfile$Sample_ID
+  view(mapfile)
+  
+  sam= sample_data(mapfile)
+  
+  
+  #View(map)
+  #head(map)
+  phylo <- merge_phyloseq(mothur_data, sam) # the final phyloseq object to work with
+  phylo
+  
+  #Next we will calculate summary statistics describing the sequence counts with the summary() function. We will then represent these stats with a boxplot and a histogram
+```
+
+
+```{r summary}
+  
+  # From sorting this table by decreasing sequence count, we can see that there were a few samples that had only a small number of reads. We will remove these (prune) from our data for analysis later on.
+  ##make a data frame with a column for the sequence counts of each sample
+  
+  
+  
+  phylo_sum_df <- data.frame(sum = sample_sums(phylo))
+  datatable(phylo_sum_df, 
+            options = list(pageLength = 10),
+            caption = "Sum of sequences per sample"
+  )
+  as.tibble (phylo_sum_df) 
+  
+  
+  
+  
+  setnames(phylo_sum_df, "", "Sample_ID", skip_absent = T)
+  phylo_sum_df
+  # write.table(phylo_sum_df, "C:/Users/saini7/Desktop/read_counts.txt", sep="\t")           
+  
+  
+  #summary statistics of sequence counts
+  summary(phylo_sum_df$sum)
+  
+  
+  
+  #Next we will calculate summary statistics describing the sequence counts with the summary() function. We will then represent these stats with a boxplot and a histogram
+  
+  histo<- ggplot(phylo_sum_df, aes(x = sum)) + 
+    geom_histogram(color = "black", fill = "darkgoldenrod3", binwidth = 1000) +
+    ggtitle("Distribution of sample sequencing depth") + 
+    xlab("Read counts") +
+    theme(axis.title.y = element_blank())+ 
+    theme(axis.text=element_text(size=24), axis.title=element_text(size=24))
+  
+  histo
+  
+  
+  
+```
+```{r Plotting Phylum Composition}
+
+set.seed(52775911)
+
+  
+  SamplesLC = subset_samples(phylo, 
+                             Sample_ID != "LCA-PT-sep-0point2Aum" & 
+                               Sample_ID != "Water-NEG-PlateA" & 
+                               Sample_ID != "Zymo-POS-PlateA" & 
+                               Sample_ID != "Cadagno15mw-E1-dil" & 
+                               Sample_ID != "LC-15mw-E1" & 
+                               Sample_ID != "LC-blank-E1"  & 
+                               Sample_ID != "LC-15mm-E1" & 
+                               Sample_ID != "LC-7m-E1"& 
+                               Sample_ID != "Cadagno15-p5m-E1-dil" & 
+                               Sample_ID != "Cadagno15-p5m-E2" &
+                                Sample_ID != "Cadagno15mw-E2" &
+                               Sample_ID != "Cadagno15m-E1-dil")
+  
+  #####Adding 15mw (whole sample for Beta diversity)
+  
+
+  
+  ###########################Bacteria Profiling in Lake Cadagno############################
+  
+  colnames(tax_table(SamplesLC))
+  colnames(tax_table(SamplesLC)) <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
+  
+  
+  
+  #Filtering Chloroplast, mitochondria classification
+  Bacteriaprofile <-  SamplesLC %>%
+    subset_taxa(
+      Kingdom == "Bacteria" &
+        Family  != "mitochondria" &
+        Class   != "Chloroplast")
+  
+  
+   GPSI = filter_taxa(Bacteriaprofile, function(x) sum(x > 3) > (0.20*length(x)), TRUE)
+
+  GPSI  = transform_sample_counts(GPSI, function(x) x / sum(x))
+                GPrSI<-  tax_glom(GPSI, taxrank="Phylum")
+
+  gpsfSI <- psmelt(GPrSI)
+          gpsfSI$Abundance_P<- gpsfSI$Abundance*100
+          gpsfSI$AA_Phylum  <-  gpsfSI$Abundance * gpsfSI$avg_cells_ml
+          
+          
+          
+          gpsfSI2 <- gpsfSI[, -c(4,7,9,10:35)]
+            gpsfSI2<- gpsfSI2[which(gpsfSI2$AA_Phylum>=100), ]
+            
+
+            ####SI Table 1
+            write.csv(gpsfSI2,"C:/Users/sooch/Documents/Phylum_100cells.csv")
+            
+            
+  
+  
+  
+  
+  
+  GP = filter_taxa(Bacteriaprofile, function(x) sum(x > 3) > (0.20*length(x)), TRUE)
+
+  GPr  = transform_sample_counts(GP, function(x) x / sum(x))
+                GPr<-  tax_glom(GPr, taxrank="Genus")
+
+  gpsf <- psmelt(GPr)
+          gpsf$Abundance_P<- gpsf$Abundance*100
+          gpsf$AA_Genus  <-  gpsf$Abundance * gpsf$avg_cells_ml
+          gpsf <- gpsf[, -c(4,7,9,10:35)]
+            gpsf2<- gpsf[which(gpsf$AA_Genus>=100), ]
+            
+            AA_Genus = dplyr::mutate(gpsf, Phylum_Genus = paste(Phylum, Genus, sep='|'))
+            
+            ####SI Table 2
+            write.csv(AA_Genus,"C:/Users/sooch/Documents/Genus_100_p.csv")
+            
+            
+            ##16s File for Cyanobacteria
+            
+               GP_cyano = filter_taxa(Bacteriaprofile, function(x) sum(x > 3) > (0.20*length(x)), TRUE)
+
+  GPr_cyano = transform_sample_counts(GP_cyano, function(x) x / sum(x))
+                #GPr_cyano<-  tax_glom(GPr_cyano, taxrank="Genus")
+
+  gpsf_cyano <- psmelt(GPr_cyano)
+          gpsf_cyano$Abundance_P<- gpsf_cyano$Abundance*100
+          gpsf_cyano$AA_Genus  <-  gpsf_cyano$Abundance * gpsf_cyano$avg_cells_ml
+          gpsf_cyano <- gpsf_cyano[, -c(4,7,9,10:35)]
+          
+          
+            gpsf_cyano2<- gpsf_cyano[which(gpsf_cyano$AA_Genus>=100), ]
+            
+            #AA_Genus = dplyr::mutate(gpsf, Phylum_Genus = paste(Phylum, Genus, sep='|'))
+
+
+
+   
+   uahbs234ab_cyna_CPF<- gpsf_cyano2[which(gpsf_cyano2$Phylum=="Cyanobacteria"), ]
+   
+   #Calculate Diversity
+   
+   
+     richnessDT<- estimate_richness(SamplesLC) #measures=c("Observed", "InvSimpson", "Shannon", "Chao1", "Simpson"))
+richnessDT<- setDT(richnessDT, keep.rownames = TRUE)[]
+colnames(richnessDT) <- paste(colnames(richnessDT), "16s_a", sep = "_")
+richnessDT2<- as.data.frame(richnessDT)
+setnames(richnessDT2,  "rn_16s_a", "Sample_ID") 
+
+richnessDT2$Depth_m<- c(15, 7, 11, 13, 15.5, 17, 19, 3, 5, 9)
+
+
+
+
+ # Ordinate (Bray-curtis dissimilarity)
+  LC_pcoa <- ordinate(
+    physeq = Bacteriaprofile, 
+    method = "PCoA", 
+    distance = "bray"
+  )
+
+betadiversity2 <- plot_ordination(SamplesLC, LC_pcoa, color = "Sample_ID") + theme_bw()+
+      geom_point(size=8)+
+
+     theme(legend.position = "right", legend.background = element_rect(size=0.3, 
+                                           colour ="white"),  legend.direction = "vertical")+
+    guides(fill = guide_legend(nrow= 3, ncol = 5, byrow = TRUE))+
+ 
+ 
+    scale_color_manual("Depth (m)", labels =c("LC-19m-E1"="19","LC-17m-E1"="17", "LC-15point5m-E1"="15.5", 
+                                              "Cadagno15m-E2"="15", "LC-13m-E1"="13", "LC-11m-E1"="11","LC-9m-E1"="9",
+"Cadagno7m-E2"="7", "LC-5m-E1"="5", "LC-3m-E1"="3"), 
+                       limits=c("LC-3m-E1", "LC-5m-E1","Cadagno7m-E2",
+                                "LC-9m-E1", "LC-11m-E1", "LC-13m-E1","Cadagno15m-E2",
+                                "LC-15point5m-E1", 
+                                "LC-17m-E1", "LC-19m-E1"), values=c("LC-19m-E1"="#d1baba","LC-17m-E1"="#d1baba",
+                                                                                                                                                                                                   "LC-15point5m-E1"="#8c677d", 
+                                                                                                                                                                                                   "Cadagno15m-E2"="#b58ca5", 
+                                                                                                                                                                                                                                                                                                                 "LC-13m-E1"="#efcee2", "LC-11m-E1"="#52854C","LC-9m-E1"="#52854C",
+                                                                                                                                                                                                   "Cadagno7m-E2"="#C3D7A4", "LC-5m-E1"="#C3D7A4", "LC-3m-E1"="#C3D7A4"))+
+    theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+  
+    labs(title = "Genotypic Beta Diversity of Bacterial Communities")+
+     theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+    theme(legend.position = c(0.45, 0.90), legend.background = element_rect(size=0.3, 
+                                             colour ="black"),  legend.direction = "horizontal")+
+         guides(fill = guide_legend(ncol=6))+
+          theme(panel.border = element_rect(colour = "black", fill=NA, size=2))+
+          theme(plot.title = element_text(size = 26, face = "bold"), plot.subtitle=element_text(size=24))+
+          theme(legend.title=element_text(size=24, face = "bold"), legend.text=element_text(size=24)) +             
+        theme(legend.background = element_blank(),
+           legend.box.background = element_rect(size = 1))+
+    theme(legend.position = "none")
+ 
+
+  Rich12<- plot_richness(SamplesLC, x="depth_m",color="Sample_ID", measures=c("Simpson"))+
+   geom_point(size=3.5)+ 
+   coord_flip()+ theme_bw()+
+  scale_x_reverse(limits = c(21,1))+
+ 
+  scale_color_manual("Depth (m)", labels=c("LC-19m-E1"="19","LC-17m-E1"="17",
+                              "LC-15point5m-E1"="15.5", 
+                              "Cadagno15m-E2"="15", 
+                              "LC-13m-E1"="13", "LC-11m-E1"="11","LC-9m-E1"="9",
+                              "Cadagno7m-E2"="7", "LC-5m-E1"="5", "LC-3m-E1"="3"), 
+                      limits=c("LC-3m-E1", "LC-5m-E1","Cadagno7m-E2","LC-9m-E1", "LC-11m-E1", "LC-13m-E1","Cadagno15m-E2","LC-15point5m-E1" ,"LC-17m-E1","LC-19m-E1"), values=c("black" ,"black", "black","black" , "black","black","black","black","black","black","black"))+
+ 
+      theme(axis.text=element_text(size=24),axis.title=element_text(size=24,face="bold"))+
+      theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+       theme(legend.position = "bottom")+
+      theme(strip.background = element_blank(),
+   strip.text = element_blank())+ #subtitle = "Simpson Diversity with 16s rRNA (No Control)"
+    ylab("Simpson Diversity Measure")+
+    labs(title ="Bacterial Genotypic Alpha Diversity")+
+   xlab("Depth (m)")+
+       theme(legend.position = "right")+
+   theme(legend.position = "right")+
+       guides(color = guide_legend(ncol= 5))+
+  
+   theme(legend.position = c(0.45, 0.85), legend.background = element_rect(size=0.3, 
+                                           colour ="black"),  legend.direction = "horizontal")+
+       guides(fill = guide_legend(ncol=2))+
+        theme(panel.border = element_rect(colour = "black", fill=NA, size=2))+
+        theme(plot.title = element_text(size = 26, face = "bold"), plot.subtitle=element_text(size=24))+
+        theme(legend.title=element_text(size=24, face = "bold"), legend.text=element_text(size=24))+
+   theme(axis.text.y = element_blank(), axis.title.y = element_blank(), axis.ticks.y = element_blank())+
+   geom_segment(aes(x = 3 , y = 0.9637824, xend = 5, yend = 0.9602236), linetype="solid", color = "black", size=2)+
+     geom_segment(aes(x = 5 , y = 0.9602236, xend = 7, yend = 0.9071117), linetype="solid", color = "black", size=2)+
+   geom_segment(aes(x = 7 , y = 0.9071117, xend = 9, yend = 0.9588645), linetype="solid", color = "black", size=2)+
+   geom_segment(aes(x = 9 , y = 0.9588645, xend = 11, yend = 0.9534005), linetype="solid", color = "black", size=2)+
+   geom_segment(aes(x = 11 , y = 0.9534005, xend = 13, yend = 0.9563223), linetype="solid", color = "black", size=2)+
+   geom_segment(aes(x = 13 , y = 0.9563223, xend = 15, yend = 0.8713818), linetype="solid", color = "black", size=2)+
+   geom_segment(aes(x = 15 , y = 0.8713818, xend = 15.5, yend = 0.9516423), linetype="solid", color = "black", size=2)+
+   geom_segment(aes(x = 15.5 , y = 0.9516423, xend = 17, yend = 0.9572178), linetype="solid", color = "black", size=2)+
+   geom_segment(aes(x = 17 , y = 0.9572178, xend = 19, yend = 0.9620925), linetype="solid", color = "black", size=2)+ #arrow = arrow(type = "open", angle = 30, length = unit(0.15, "inches")))+
+       annotate("rect", ymin=-Inf, ymax=Inf, xmin=-Inf, xmax=12.5, alpha=0.1, fill="green4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=12.5, xmax=13.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=13.5, xmax=15.5, alpha=0.5, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=15.5, xmax=16.5, alpha=0.2, fill="deeppink4")+
+    annotate("rect", ymin=-Inf, ymax=Inf, xmin=16.5, xmax=Inf, alpha=0.2, fill="pink4")+
+  theme(legend.position = "none")     
+  
+  Rich12
+
+            
+            
+```
+
+
+
